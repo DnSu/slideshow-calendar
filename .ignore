@@ -1,0 +1,2 @@
+# Plans are excluded from ripgrep and Grep results to save agent tokens. See AGENTS.md.
+plans/

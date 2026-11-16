@@ -1,0 +1,167 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+  cursor: none;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.player {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  overflow: hidden;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  animation-name: fade-in;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.offline-dot {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f5a524;
+  opacity: 0.6;
+}
+
+/* Calendar: sized in vh/vw so it stays readable from across a room. */
+.calendar {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 4vh 5vw;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2vw;
+  margin: 0 0 4vh;
+}
+
+.calendar-page {
+  font-size: 2.4vh;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.calendar h1 {
+  margin: 0;
+  font-size: 5vh;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.calendar-days {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.calendar-day h2 {
+  margin: 0 0 2.2vh;
+  padding-bottom: 0.8vh;
+  border-bottom: 0.3vh solid #444;
+  font-size: 2.9vh;
+  font-weight: 600;
+  color: #ffd166;
+}
+
+.calendar-day + .calendar-day {
+  margin-top: 5.5vh;
+}
+
+.calendar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.calendar li {
+  display: flex;
+  gap: 3vw;
+  margin: 0 0 2.6vh;
+}
+
+.event-time {
+  flex: 0 0 12vw;
+  font-size: 2.7vh;
+  font-weight: 600;
+  color: #9fd3ff;
+}
+
+.event-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-title {
+  font-size: 3.2vh;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 0.4vh;
+}
+
+.event-location {
+  font-size: 2.3vh;
+  margin-bottom: 0.3vh;
+  color: #ccc;
+}
+
+.event-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 2.2vh;
+  line-height: 1.35;
+  color: #aaa;
+}
+
+/* /calendar developer preview */
+.preview-notice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vw;
+  text-align: center;
+  font-size: 3vh;
+  color: #bbb;
+}

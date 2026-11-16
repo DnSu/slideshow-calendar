@@ -1,0 +1,12 @@
+{
+  "slideshow": { "imageSeconds": 20, "imageFit": "cover", "transitionMs": 1000 },
+  "calendar": {
+    "showAfterImages": 5,
+    "displaySeconds": 60,
+    "fetchDays": 365,
+    "eventsPerPage": 8,
+    "title": "Upcoming Events"
+  },
+  "refresh": { "sourceMinutes": 60, "playlistMinutes": 10, "pageReloadHours": 6 },
+  "offline": { "showIndicator": true }
+}

@@ -1,0 +1,112 @@
+import { describe, expect, it } from "vitest";
+import { eventPages } from "@/lib/events";
+import { mergePlaylist } from "@/lib/merge";
+import { activeImages, initialSeqState, nextSlide, trustedNow, type Slide } from "@/lib/slides";
+import { defaultSettings } from "@/lib/config";
+import type { Playlist, PlaylistEvent } from "@/lib/types";
+
+function run(ids: string[], hasEvents: boolean, steps: number, after = 5) {
+  let state = initialSeqState;
+  const out: string[] = [];
+  for (let i = 0; i < steps; i++) {
+    const r = nextSlide(state, ids, hasEvents, after);
+    state = r.state;
+    out.push(label(r.slide));
+  }
+  return out;
+}
+const label = (s: Slide | null) => (s === null ? "-" : s.kind === "calendar" ? "CAL" : s.id);
+
+describe("nextSlide", () => {
+  const ids = ["a", "b", "c", "d", "e", "f", "g"];
+  it("shows the calendar after every 5 images", () => {
+    expect(run(ids, true, 14)).toEqual([
+      "a", "b", "c", "d", "e", "CAL", "f", "g", "a", "b", "c", "CAL", "d", "e",
+    ]);
+  });
+  it("skips the calendar without events", () => {
+    expect(run(["a", "b"], false, 7)).toEqual(["a", "b", "a", "b", "a", "b", "a"]);
+  });
+  it("keeps the calendar when there are no images", () => {
+    expect(run([], true, 3)).toEqual(["CAL", "CAL", "CAL"]);
+  });
+  it("shows nothing with neither", () => {
+    expect(run([], false, 2)).toEqual(["-", "-"]);
+  });
+  it("copes with a shrinking list", () => {
+    const first = nextSlide({ cursor: 6, shown: 1 }, ["a", "b"], false, 5);
+    expect(label(first.slide)).toBe("a");
+  });
+});
+
+describe("activeImages", () => {
+  const imgs = [
+    { id: "root", name: "r", start: null, end: null },
+    { id: "old", name: "o", start: null, end: "2026-12-30" },
+    { id: "range", name: "x", start: "2026-12-31", end: "2027-01-02" },
+  ];
+  it("applies windows by day in the timezone", () => {
+    const at = Date.parse("2026-12-31T12:00:00Z");
+    expect(activeImages(imgs, at, "UTC").map((i) => i.id)).toEqual(["root", "range"]);
+    expect(activeImages(imgs, Date.parse("2027-01-03T12:00:00Z"), "UTC").map((i) => i.id)).toEqual(["root"]);
+  });
+});
+
+describe("trustedNow", () => {
+  it("never goes earlier than the last server time", () => {
+    expect(trustedNow(1000, 5000)).toBe(5000);
+    expect(trustedNow(9000, 5000)).toBe(9000);
+  });
+});
+
+const ev = (id: string, start: string, end: string, extra: Partial<PlaylistEvent> = {}): PlaylistEvent => ({
+  id, title: id, location: "", description: "", allDay: false,
+  start: Date.parse(start), end: Date.parse(end),
+  startDay: start.slice(0, 10), endDay: end.slice(0, 10), ...extra,
+});
+
+describe("eventPages", () => {
+  const now = Date.parse("2026-03-10T12:00:00Z");
+  const opts = { eventsPerPage: 3 };
+  const days = (pages: ReturnType<typeof eventPages>) =>
+    pages.map((p) => p.map((g) => [g.day, g.events.map((e) => e.id)]));
+  it("keeps all future events (no horizon), drops past ones, groups by day", () => {
+    const events = [
+      ev("past", "2026-03-10T09:00:00Z", "2026-03-10T10:00:00Z"),
+      ev("far", "2027-02-01T15:00:00Z", "2027-02-01T16:00:00Z"),
+      ev("later", "2026-03-10T15:00:00Z", "2026-03-10T16:00:00Z"),
+      ev("now", "2026-03-10T11:00:00Z", "2026-03-10T13:00:00Z"),
+    ];
+    expect(days(eventPages(events, now, "UTC", opts))).toEqual([
+      [["2026-03-10", ["now", "later"]], ["2027-02-01", ["far"]]],
+    ]);
+  });
+  it("splits into pages and repeats a day heading that spans pages", () => {
+    const many = Array.from({ length: 7 }, (_, i) =>
+      ev(`e${i}`, `2026-03-1${Math.floor(i / 2) + 1}T1${i}:00:00Z`, `2026-03-1${Math.floor(i / 2) + 1}T1${i}:30:00Z`),
+    );
+    const pages = eventPages(many, now, "UTC", opts);
+    expect(pages.map((p) => p.flatMap((g) => g.events).length)).toEqual([3, 3, 1]);
+    expect(days(pages)[1][0]).toEqual(["2026-03-12", ["e3"]]);
+    expect(eventPages([], now, "UTC", opts)).toEqual([]);
+  });
+  it("files a running multi-day event under today", () => {
+    const e = ev("multi", "2026-03-08T00:00:00Z", "2026-03-12T00:00:00Z", { allDay: true });
+    expect(eventPages([e], now, "UTC", opts)[0][0].day).toBe("2026-03-10");
+  });
+});
+
+describe("mergePlaylist", () => {
+  const base = (over: Partial<Playlist>): Playlist => ({
+    images: [], events: [], config: { ...defaultSettings, timezone: "UTC" }, serverTime: 1000, degraded: [], ...over,
+  });
+  const img = (id: string) => ({ id, name: id, start: null, end: null });
+  it("keeps data for degraded sources and ignores older playlists", () => {
+    const prev = base({ images: [img("a")], events: [ev("e", "2026-03-10T15:00:00Z", "2026-03-10T16:00:00Z")] });
+    const next = base({ serverTime: 2000, degraded: ["drive"], images: [], events: [] });
+    const m = mergePlaylist(prev, next);
+    expect(m.images.map((i) => i.id)).toEqual(["a"]);
+    expect(m.events).toEqual([]);
+    expect(mergePlaylist(base({ serverTime: 3000 }), base({ serverTime: 2000 })).serverTime).toBe(3000);
+  });
+});
