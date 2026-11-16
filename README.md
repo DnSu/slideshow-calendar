@@ -162,3 +162,7 @@ src/components/              Player, CalendarSlide, OfflineDot
 public/sw.js                 service worker
 tests/                       vitest tests and fixtures (fake IDs only)
 ```
+
+## License
+
+[MIT](LICENSE)
