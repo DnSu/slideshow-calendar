@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import CalendarPreview from "@/components/CalendarPreview";
 
-export const metadata: Metadata = { title: "Calendar preview", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Calendar preview",
+  robots: { index: false },
+};
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
 type Props = { searchParams: Query };
@@ -20,6 +23,9 @@ export default function CalendarPage({ searchParams }: Props) {
 async function Preview({ searchParams }: Props) {
   const q = await searchParams;
   const requested = Number(q.page);
-  const pinnedPage = Number.isInteger(requested) && requested >= 1 ? requested - 1 : null;
-  return <CalendarPreview demo={q.demo !== undefined} pinnedPage={pinnedPage} />;
+  const pinnedPage =
+    Number.isInteger(requested) && requested >= 1 ? requested - 1 : null;
+  return (
+    <CalendarPreview demo={q.demo !== undefined} pinnedPage={pinnedPage} />
+  );
 }

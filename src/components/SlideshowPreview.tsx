@@ -50,6 +50,8 @@ export default function SlideshowPreview({ demo }: Props) {
   const pageCount = cfg
     ? eventPages(events, nowMs, cfg.timezone, cfg.calendar).length
     : 0;
+  // Active images, plus the calendar if it has events: the slide number loops 1..assetCount.
+  const assetCount = images.length + (pageCount > 0 ? 1 : 0);
   const byId = useMemo(() => new Map(images.map((i) => [i.id, i])), [images]);
 
   // Replay the player's order up to one step past the current one (so we know if Next works).
@@ -134,7 +136,8 @@ export default function SlideshowPreview({ demo }: Props) {
           {step && cfg
             ? describe(
                 step,
-                index,
+                index % assetCount,
+                assetCount,
                 byId,
                 pageCount,
                 cfg.slideshow.imageSeconds,
@@ -164,18 +167,20 @@ function windowText(i: PlaylistImage): string {
   return `${i.start} – ${i.end}`;
 }
 
+/** `position` loops 0..total-1, where total = active images, plus 1 for the calendar if it has events. */
 function describe(
   step: Step,
-  index: number,
+  position: number,
+  total: number,
   byId: Map<string, PlaylistImage>,
   pageCount: number,
   imageSeconds: number,
   calendarSeconds: number,
 ): string {
-  const n = `Slide ${index + 1}`;
+  const n = `Slide ${position + 1} of ${total}`;
   if (step.slide.kind === "calendar") {
     return `${n} · Calendar page ${step.page + 1} of ${pageCount} · ${calendarSeconds}s on screen`;
   }
   const img = byId.get(step.slide.id);
-  return `${n} · ${img?.name ?? "image"} (${img ? windowText(img) : ""}) · ${imageSeconds}s on screen`;
+  return `${n} · ${img ? windowText(img) : "image"} · ${imageSeconds}s on screen`;
 }

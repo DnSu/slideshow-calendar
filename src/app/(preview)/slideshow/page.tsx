@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import SlideshowPreview from "@/components/SlideshowPreview";
 
-export const metadata: Metadata = { title: "Slideshow preview", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Slideshow preview",
+  robots: { index: false },
+};
 
 type Query = Promise<Record<string, string | string[] | undefined>>;
 type Props = { searchParams: Query };

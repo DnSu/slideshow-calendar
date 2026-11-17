@@ -101,24 +101,19 @@ The screen never trusts a clock earlier than the last successful contact with th
 4. Reboot the player while it is still offline.
 5. After it starts, confirm the slideshow comes back. If it stays black, the browser is wiping its storage; use the fallback of packaging the app as a PiSignage offline web asset (zip).
 
-## Calendar preview (`/calendar`)
+## Developer previews (`/slideshow`, `/calendar`)
 
-The signage screen runs at `/`. For checking the calendar page on its own, open `/calendar`:
+The signage screen runs at `/`. Two preview pages share a menu at the top for switching between them. The menu also has a **Sample events** toggle (made-up events, handy while the real calendar is empty; same as adding `?demo`) and a link that opens the real screen. Both pages show a portrait **9:16** frame sized to the browser window, with controls below it. The content is scaled to the frame. Neither page is linked from the screen, and both are marked `noindex`.
 
-- Shows the live calendar exactly as the screen draws it, rotating pages on the same `displaySeconds` timing.
-- `/calendar?demo` uses made-up events (handy while the real calendar is empty, or to check layout and paging).
-- `/calendar?page=2` stays on one page; the ← / → keys step through pages.
-- It is not linked from the screen and is marked `noindex`. It only shows what the public calendar already shows.
+**`/slideshow`** shows the same images, calendar pages, fit and order as the screen.
 
-## Slideshow preview (`/slideshow`)
+- **It never advances on its own.** Use **◀ Prev** / **Next ▶** (or the ← / → keys); **Restart** goes back to the first slide.
+- The line between the buttons shows the slide number ("Slide 2 of 4", counting active images plus the calendar and looping back to 1), the image's date window (or the calendar page), and how long it stays up on the real screen.
 
-For checking content without waiting on the timer, open `/slideshow`:
+**`/calendar`** shows only the calendar, drawn the way the screen draws it.
 
-- A portrait **9:16** frame sized to fit the browser window, showing the same images, calendar pages, fit, and order as the screen. The calendar is scaled to the frame.
-- **It never advances on its own.** Use the **◀ Prev** / **Next ▶** buttons below the frame (or the ← / → keys); **Restart** goes back to the first slide.
-- The line between the buttons shows the slide number, the image's file name and date window (or the calendar page), and how long it stays up on the real screen.
-- `/slideshow?demo` uses made-up calendar events.
-- Like `/calendar`, it is not linked from the screen and is marked `noindex`.
+- Pages rotate on the same `displaySeconds` timing as the screen. **Pause** stops the rotation, and **◀ Prev** / **Next ▶** (or ← / →) step through pages.
+- `/calendar?page=2` opens paused on page 2.
 
 ## Settings and the Drive `config.json` override
 
@@ -177,10 +172,10 @@ src/lib/playlist.ts          cached sources and the playlist
 src/lib/slides.ts            slide order and timing, clock check
 src/lib/events.ts            upcoming events, calendar pages
 src/lib/eventLabels.ts       time and multi-day labels
-src/app/calendar, slideshow  developer previews
+src/app/(preview)/           developer previews (calendar, slideshow) and their shared menu
 src/app/api/playlist         playlist JSON
 src/app/api/image/[id]       image proxy
-src/components/              Player, CalendarSlide, OfflineDot, CalendarPreview, SlideshowPreview
+src/components/              Player, CalendarSlide, OfflineDot, previews and PreviewNav
 public/sw.js                 service worker
 tests/                       vitest tests and fixtures (fake IDs only)
 ```
