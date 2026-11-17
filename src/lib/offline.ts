@@ -12,14 +12,15 @@ export async function setupOffline(): Promise<void> {
     await navigator.serviceWorker.register("/sw.js");
     const reg = await navigator.serviceWorker.ready;
     // Scripts/styles loaded before the worker took control: have it save them too.
-    const urls = [
-      location.pathname,
-      ...performance
-        .getEntriesByType("resource")
-        .map((e) => e.name)
-        .filter((u) => u.startsWith(location.origin + "/_next/")),
-    ];
-    reg.active?.postMessage({ type: "precache", urls });
+    const used = [
+      ...performance.getEntriesByType("resource").map((e) => e.name),
+      ...Array.from(document.querySelectorAll<HTMLElement>("script[src], link[href]")).map(
+        (el) => (el as HTMLScriptElement).src || (el as HTMLLinkElement).href,
+      ),
+    ].filter((u) => u.startsWith(location.origin + "/_next/"));
+    const urls = [location.pathname, ...new Set(used)];
+    // Online: this page just came from the network, so the worker may delete old app files.
+    reg.active?.postMessage({ type: "precache", urls, prune: navigator.onLine });
   } catch (err) {
     console.warn("service worker setup failed", err);
   }

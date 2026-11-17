@@ -6,6 +6,7 @@ import { addDays, dayInTz } from "./dates";
 import { downloadText, isImageEntry, listFolder, type DriveEntry, fileVersion } from "./drive";
 import { parseFolderName, type DateWindow } from "./folderDates";
 import type { Playlist, PlaylistEvent, PlaylistImage, PlaylistWeather, WeatherUnits } from "./types";
+import { currentRelease } from "./release";
 import { fetchForecast, fetchGeocode } from "./weather";
 
 type DriveSnapshot = {
@@ -175,6 +176,6 @@ export async function getPlaylist(): Promise<Playlist> {
 
   const events: PlaylistEvent[] = (cal?.events ?? []).filter((e) => e.end >= now);
   const images = drive ? assembleImages(drive, dayInTz(now, config.timezone)) : [];
-  return { images, events, config, weather, serverTime: now, degraded };
+  return { images, events, config, weather, serverTime: now, degraded, release: currentRelease() };
 }
 

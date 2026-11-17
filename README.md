@@ -102,6 +102,8 @@ Node 24.x (the newest Vercel supports) is pinned via `engines` in `package.json`
 
 Updates reach screens within about 70 to 80 minutes (60 minutes server cache plus the screen's 10 minute poll). Date windows are checked on the screen every minute, so they never wait for a refresh. A file replaced under the same name is picked up the same way: the image URL includes a version taken from Drive's "last modified" time, so screens and the CDN fetch the new picture instead of their saved copy.
 
+**New deploys.** Every playlist response carries a release ID, which Vercel provides automatically as `VERCEL_DEPLOYMENT_ID` (keep "Automatically expose System Environment Variables" on, the default). When an online screen sees a different ID from the one its page was loaded with, it reloads, so screens pick up a new deploy within about one playlist check (~10 minutes). It reloads at most once per new release (the 6 hour reload below is the fallback if that doesn't take). Locally the ID is `dev` and no auto-reload happens.
+
 ## Add the Web Link in PiSignage
 
 1. In the PiSignage server, Assets, Add a **Web Link** with your Vercel URL (for example `https://your-project.vercel.app/`).
@@ -110,7 +112,7 @@ Updates reach screens within about 70 to 80 minutes (60 minutes server cache plu
 
 ## Offline behavior and the reboot test
 
-The first load needs internet. After that, a service worker saves the page, every image and the latest playlist in the Pi's browser, and asks the browser to keep that storage (`navigator.storage.persist()`). Images that left the playlist are deleted. While offline the screen keeps going: folder windows and event times are checked locally, the 6 hour page reload is skipped, and a small amber dot appears in the bottom-right corner (turn it off with `offline.showIndicator`).
+The first load needs internet. After that, a service worker saves the page, every image and the latest playlist in the Pi's browser, and asks the browser to keep that storage (`navigator.storage.persist()`). Images that left the playlist are deleted, and saved app files from older deploys are cleaned up after a page loads from the network. While offline the screen keeps going: folder windows and event times are checked locally, the 6 hour page reload and the new-deploy reload are skipped (an offline screen keeps the old version and updates after it reconnects), and a small amber dot appears in the bottom-right corner (turn it off with `offline.showIndicator`).
 
 The screen never trusts a clock earlier than the last successful contact with the server, because a Pi without a battery-backed clock restarts at its last saved time.
 

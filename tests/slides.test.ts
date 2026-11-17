@@ -123,7 +123,7 @@ describe("eventPages", () => {
 
 describe("mergePlaylist", () => {
   const base = (over: Partial<Playlist>): Playlist => ({
-    images: [], events: [], config: { ...defaultSettings, timezone: "UTC" }, serverTime: 1000, degraded: [], ...over,
+    images: [], events: [], config: { ...defaultSettings, timezone: "UTC" }, serverTime: 1000, degraded: [], release: "dev", ...over,
   });
   const img = (id: string) => ({ id, name: id, start: null, end: null });
   it("keeps data for degraded sources and ignores older playlists", () => {

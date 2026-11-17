@@ -79,6 +79,7 @@ self.addEventListener("message", (event) => {
     event.waitUntil(
       (async () => {
         const cache = await caches.open(SHELL);
+        let allSaved = true;
         for (const raw of data.urls) {
           try {
             const url = new URL(raw, self.location.origin);
@@ -87,8 +88,26 @@ self.addEventListener("message", (event) => {
             if (await cache.match(key)) continue;
             const res = await fetch(url.pathname + url.search);
             if (res.ok) await cache.put(key, res);
+            else allSaved = false;
           } catch {
-            /* offline: retry on next load */
+            allSaved = false; /* offline: retry on next load */
+          }
+        }
+        // Only clean up once every file this version needs is saved, so a dropped connection
+        // mid-save never leaves an offline screen without either version.
+        // The page came from the network: drop app files it no longer uses (older deploys).
+        // Only /_next/static/ entries in SHELL; page HTML, images and data are never touched.
+        const keep = data.urls.map((raw) => {
+          const u = new URL(raw, self.location.origin);
+          return u.pathname + u.search;
+        });
+        if (data.prune === true && allSaved && keep.some((k) => k.startsWith("/_next/static/"))) {
+          const wanted = new Set(keep);
+          for (const req of await cache.keys()) {
+            const u = new URL(req.url);
+            if (u.pathname.startsWith("/_next/static/") && !wanted.has(u.pathname + u.search)) {
+              await cache.delete(req);
+            }
           }
         }
       })(),

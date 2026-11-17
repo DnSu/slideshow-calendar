@@ -9,6 +9,7 @@ import {
   setupOffline,
   warmImages,
 } from "@/lib/offline";
+import { BUILT_RELEASE, shouldReloadForRelease } from "@/lib/release";
 import { eventPages } from "@/lib/events";
 import {
   activeImages,
@@ -36,6 +37,8 @@ export default function Player() {
   const [offline, setOffline] = useState(false);
   const playlistRef = useRef<Playlist | null>(null);
   const failedRef = useRef(false);
+  // The version this page's code is. If the build didn't record one, the first live response sets it.
+  const knownRelease = useRef<string | null>(BUILT_RELEASE !== "dev" ? BUILT_RELEASE : null);
 
   useEffect(() => {
     playlistRef.current = playlist;
@@ -50,6 +53,36 @@ export default function Player() {
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    // Reload when a live response comes from a different deployment than this page's code.
+    function checkRelease(incoming: string | undefined, fromCache: boolean) {
+      if (fromCache || !incoming) return;
+      if (knownRelease.current === null) {
+        knownRelease.current = incoming;
+        return;
+      }
+      const KEY = "reloadedForRelease";
+      let tried: string | null = null;
+      try {
+        tried = sessionStorage.getItem(KEY);
+      } catch {
+        /* ignore */
+      }
+      if (
+        shouldReloadForRelease(knownRelease.current, incoming, {
+          online: navigator.onLine,
+          fromCache,
+          alreadyTried: tried === incoming,
+        })
+      ) {
+        try {
+          sessionStorage.setItem(KEY, incoming);
+        } catch {
+          /* without storage, the pageReloadHours reload is the fallback */
+          return;
+        }
+        location.reload();
+      }
+    }
     async function poll() {
       let ok = false;
       let minutes = 10;
@@ -57,7 +90,9 @@ export default function Player() {
         const res = await fetch("/api/playlist", { cache: "no-store" });
         if (res.ok) {
           const data = (await res.json()) as Playlist;
-          ok = res.headers.get("X-From-Cache") !== "1";
+          const fromCache = res.headers.get("X-From-Cache") === "1";
+          ok = !fromCache;
+          if (ok && !cancelled) checkRelease(data.release, fromCache);
           minutes = data.config.refresh.playlistMinutes;
           if (!cancelled) setPlaylist((prev) => mergePlaylist(prev, data));
         }

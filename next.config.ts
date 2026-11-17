@@ -4,6 +4,9 @@ import type { NextConfig } from "next";
 const defaults = JSON.parse(readFileSync(new URL("./slideshow.config.json", import.meta.url), "utf8"));
 
 const nextConfig: NextConfig = {
+  // The deployment this bundle was built for, so a screen knows which version its code is.
+  // Vercel sets VERCEL_DEPLOYMENT_ID for builds too; "dev" elsewhere (no auto-reload).
+  env: { NEXT_PUBLIC_RELEASE: process.env.VERCEL_DEPLOYMENT_ID || "dev" },
   cacheComponents: true,
   partialPrefetching: true,
   cacheLife: {

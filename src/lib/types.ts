@@ -67,5 +67,7 @@ export type Playlist = {
   /** Server clock when this response was produced (ms). Used as a floor for the screen's clock. */
   serverTime: number;
   /** Which sources failed with no earlier good copy, so the screen should keep what it has. */
+  /** Deployment ID of the server that produced this response ("dev" locally). Never cached. */
+  release: string;
   degraded: ("drive" | "calendar" | "weather")[];
 };
