@@ -50,6 +50,33 @@ works every year without being changed.
 Don't mix: "0000-06-15 2026-07-05" will not work.
 
 
+HOLIDAYS
+--------
+Make a folder named exactly "Holidays". Inside it, make one folder
+for each holiday, named with the holiday's date, and put that
+holiday's pictures inside. The pictures show every year, from 7 days
+before the holiday through 1 day after it.
+
+  Folder name inside "Holidays"                Holiday
+  -------------------------------------------  ----------------------
+  July 4 - Independence Day                    July 4
+  December 31 - New Year's Eve                 December 31
+  Third Monday in February - Presidents Day    3rd Monday of February
+  Last Monday in May - Memorial Day            last Monday of May
+  Fourth Thursday in November - Thanksgiving   4th Thursday of Nov.
+
+You can write the day as First, Second, Third, Fourth or Last.
+Months and days can be written in full or short (Feb, Mon).
+Everything after " - " is just a note; it can be left out.
+
+For a holiday season instead of one day, use dates with 0000 as in
+part 3, for example "0000-12-01 0000-12-31 - Happy Holidays". Those
+show exactly on those dates.
+
+Holiday pictures show before all other pictures.
+To change the 7 and 1 days, see "holidays" in part 5.
+
+
 EMERGENCY OVERRIDE
 ------------------
 A folder named exactly "Emergency Override" is special. While it has
@@ -65,11 +92,14 @@ Refresh: the screens then change within about 10 minutes.
 
 4. THINGS TO KNOW
 -----------------
-- Apart from "Emergency Override", folders with any other name are ignored. Nothing in them shows.
+- Apart from "Holidays" and "Emergency Override", folders with any
+  other name are ignored. Nothing in them shows.
   Examples that will NOT work: "December", "2026-13-01",
   "2026-12-31 2026-12-01" (ends before it starts), "12-25".
-- Only one level of folders. A folder inside a date folder is ignored.
-- Pictures show in name order: loose pictures first, then each date
+- Only one level of folders (two inside "Holidays"). A folder inside
+  a date folder is ignored.
+- Pictures show in name order: holiday pictures first (see
+  HOLIDAYS), then loose pictures, then each date
   folder in name order. Number file names to control the order,
   for example 01-welcome.jpg, 02-pool-hours.jpg.
 - Use pictures the same shape as the screen (for a tall screen,
@@ -77,6 +107,8 @@ Refresh: the screens then change within about 10 minutes.
   to fill the screen.
 - Use JPG or PNG files.
 - Changes can take up to about an hour and a half to appear.
+  If you move or delete a picture, the screens notice when they try
+  to show it, skip it, and update their list within a few minutes.
 - Old date folders stop showing by themselves. You can delete them
   whenever you like.
 - Don't rename the file called config.json if there is one.
@@ -113,6 +145,13 @@ The weather slide has its own "weather" section in config.json:
   units              "fahrenheit" or "celsius"
   displaySeconds     seconds the weather slide stays on screen (15)
   title              heading on the weather slide ("Weather")
+
+The "holidays" section sets when holiday pictures show:
+
+  Setting            What it does
+  -----------------  ------------------------------------------------
+  daysBefore         days before a holiday they start showing (7)
+  daysAfter          days after a holiday they keep showing (1)
 
 The weather slide shows right after the calendar. It needs the
 screen's location to be set up by whoever manages the website.

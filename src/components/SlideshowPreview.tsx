@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { demoEvents } from "@/lib/demoEvents";
 import { demoWeather } from "@/lib/demoWeather";
 import { weatherView } from "@/lib/weatherView";
@@ -34,6 +34,8 @@ export default function SlideshowPreview({ demo }: Props) {
   // images whose dates haven't started (the playlist already leaves out ended folders).
   const [showAll, setShowAll] = useState(false);
   const [refreshNote, setRefreshNote] = useState<string | null>(null);
+  // Images that failed to load and made us reload the list once (so a still-broken one can't loop).
+  const reloadedFor = useRef(new Set<string>());
 
   useEffect(() => {
     fetch("/api/playlist", { cache: "no-store" })
@@ -44,6 +46,30 @@ export default function SlideshowPreview({ demo }: Props) {
       .catch((e: unknown) =>
         setError(e instanceof Error ? e.message : String(e)),
       );
+  }, []);
+
+  // A picture failed to load (probably moved or deleted in Drive): load the list again, which
+  // leaves it out once the server sees the change. /api/image already asked it to re-read Drive.
+  const onImageError = useCallback(async (id: string) => {
+    if (reloadedFor.current.has(id)) {
+      setRefreshNote("This picture can't be loaded from Drive");
+      return;
+    }
+    reloadedFor.current.add(id);
+    setRefreshNote("A picture couldn't be loaded; reloading the list…");
+    try {
+      const p = await fetch(`/api/playlist?fresh=${Date.now()}`, { cache: "no-store" });
+      if (!p.ok) throw new Error(`HTTP ${p.status}`);
+      const data = (await p.json()) as Playlist;
+      setPlaylist(data);
+      setRefreshNote(
+        data.images.some((i) => i.id === id)
+          ? "This picture can't be loaded from Drive"
+          : "A picture was moved or deleted in Drive; the list is updated",
+      );
+    } catch (e) {
+      setRefreshNote(`Reload failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }, []);
 
   // Refresh: have the server re-read Drive now, then load the new playlist. The query string
@@ -195,6 +221,7 @@ export default function SlideshowPreview({ demo }: Props) {
               <img
                 src={imageUrl(step.slide.id, byId.get(step.slide.id)?.version)}
                 alt=""
+                onError={() => step.slide.kind === "image" && void onImageError(step.slide.id)}
                 style={{ objectFit: cfg.slideshow.imageFit }}
               />
             ) : step.slide.kind === "weather" ? (

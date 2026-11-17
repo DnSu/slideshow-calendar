@@ -55,4 +55,13 @@ describe("windowLabel", () => {
       "on Dec 24th, 2026",
     );
   });
+  it("describes holiday windows", () => {
+    expect(
+      windowLabel({
+        start: null,
+        end: null,
+        holiday: { rule: { kind: "weekday", month: 11, weekday: 4, nth: 4 }, before: 7, after: 1 },
+      }),
+    ).toBe("every year, 7 days before to 1 day after the fourth Thursday in November");
+  });
 });

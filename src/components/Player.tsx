@@ -42,6 +42,8 @@ export default function Player() {
   const [empty, setEmpty] = useState<EmptyReason[] | null>(null);
   const playlistRef = useRef<Playlist | null>(null);
   const failedRef = useRef(false);
+  // Check the playlist now instead of at the next scheduled time (at most once a minute).
+  const pollSoonRef = useRef<() => void>(() => {});
   // The version this page's code is. If the build didn't record one, the first live response sets it.
   const knownRelease = useRef<string | null>(
     BUILT_RELEASE !== "dev" ? BUILT_RELEASE : null,
@@ -60,6 +62,16 @@ export default function Player() {
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let polling = false;
+    let lastEarlyPoll = 0;
+    // An image failed to load (likely moved or deleted in Drive): get the new list now.
+    pollSoonRef.current = () => {
+      const now = Date.now();
+      if (cancelled || polling || now - lastEarlyPoll < MINUTE) return;
+      lastEarlyPoll = now;
+      clearTimeout(timer);
+      void poll(true);
+    };
     // Reload when a live response comes from a different deployment than this page's code.
     function checkRelease(incoming: string | undefined, fromCache: boolean) {
       if (fromCache || !incoming) return;
@@ -90,11 +102,14 @@ export default function Player() {
         location.reload();
       }
     }
-    async function poll() {
+    // `fresh`: skip the CDN's short-lived copy of the playlist.
+    async function poll(fresh = false) {
+      polling = true;
       let ok = false;
       let minutes = 10;
       try {
-        const res = await fetch("/api/playlist", { cache: "no-store" });
+        const url = fresh ? `/api/playlist?fresh=${Date.now()}` : "/api/playlist";
+        const res = await fetch(url, { cache: "no-store" });
         if (res.ok) {
           const data = (await res.json()) as Playlist;
           const fromCache = res.headers.get("X-From-Cache") === "1";
@@ -106,6 +121,7 @@ export default function Player() {
       } catch {
         /* keep what we have */
       }
+      polling = false;
       if (cancelled) return;
       failedRef.current = !ok;
       setOffline(!ok);
@@ -212,7 +228,8 @@ export default function Player() {
           if (slide?.kind !== "image") break;
           if (await preloadImage(src(slide.id))) break;
           if (cancelled) return;
-          slide = null; // failed to load: skip it
+          slide = null; // failed to load: skip it, and check whether the playlist changed
+          pollSoonRef.current();
         }
         if (cancelled) return;
         if (!slide && hasEvents) slide = { kind: "calendar" };
@@ -296,6 +313,7 @@ export default function Player() {
               src={l.src}
               alt=""
               style={{ objectFit: cfg?.slideshow.imageFit ?? "cover" }}
+              onError={() => pollSoonRef.current()}
             />
           ) : l.slide.kind === "weather" ? (
             cfg &&

@@ -23,5 +23,9 @@
     "units": "fahrenheit",
     "displaySeconds": 15,
     "title": "Weather"
+  },
+  "holidays": {
+    "daysBefore": 7,
+    "daysAfter": 1
   }
 }

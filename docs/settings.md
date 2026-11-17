@@ -40,6 +40,8 @@ Example:
 | `weather.units` | `fahrenheit` (default) or `celsius`; wind follows (mph or km/h) | Yes |
 | `weather.displaySeconds` | seconds for the weather slide (15) | Yes |
 | `weather.title` | slide heading | Yes |
+| `holidays.daysBefore` | days before a holiday its pictures start showing (7) | Yes |
+| `holidays.daysAfter` | days after a holiday they keep showing (1) | Yes |
 | `WEATHER_ZIP`, `WEATHER_COUNTRY`, `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` | weather location | No (environment only) |
 
 [← Back to the README](../README.md)

@@ -1,8 +1,9 @@
-import { cacheLife, cacheTag } from "next/cache";
+import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { fetchEvents } from "./calendar";
-import type { Settings } from "./config";
+import type { CoreSettings, Settings } from "./config";
 import {
   buildSettings,
+  defaultSettings,
   getEnv,
   getWeatherLocation,
   parseOverrideText,
@@ -15,7 +16,8 @@ import {
   type DriveEntry,
   fileVersion,
 } from "./drive";
-import { parseFolderName, type DateWindow } from "./folderDates";
+import { parseFolderName, stripLabel, type DateWindow } from "./folderDates";
+import { holidayOccurrence, parseHolidayRule, type HolidayRule } from "./holidays";
 import type {
   Playlist,
   PlaylistEvent,
@@ -32,6 +34,12 @@ type DriveSnapshot = {
   /** Contents of the root's "Emergency Override" folder (empty if there is none). */
   emergency: DriveEntry[];
   folders: { name: string; window: DateWindow; entries: DriveEntry[] }[];
+  /**
+   * Folders inside the root's "Holidays" folder. `rule` for holiday names ("July 4",
+   * "Last Monday in May"); `window` for ordinary date-folder names. Absent in snapshots
+   * cached before this existed.
+   */
+  holidays?: HolidayFolder[];
   override: unknown;
   fetchedAt: number;
 };
@@ -48,6 +56,51 @@ export const SOURCE_TAGS = {
   calendar: "calendar",
   weather: "weather",
 } as const;
+
+type HolidayFolder = {
+  name: string;
+  entries: DriveEntry[];
+} & ({ rule: HolidayRule; window?: undefined } | { rule?: undefined; window: DateWindow });
+
+/** The folders inside "Holidays" whose names are understood, with their contents. */
+async function loadHolidayFolders(folderId: string, today: string): Promise<HolidayFolder[]> {
+  const listing = await listFolder(folderId);
+  if (!listing.recognized) throw new Error(`Drive subfolder page not recognised ("${HOLIDAYS_FOLDER}")`);
+  const out: HolidayFolder[] = [];
+  for (const f of listing.entries.filter((e) => e.isFolder)) {
+    const rule = parseHolidayRule(stripLabel(f.name));
+    let when: { rule: HolidayRule } | { window: DateWindow };
+    if (rule) when = { rule };
+    else {
+      const parsed = parseFolderName(f.name);
+      if (!parsed.ok) {
+        console.warn(`[drive] ignoring holiday folder "${f.name}": not a holiday date or ${parsed.reason}`);
+        continue;
+      }
+      if (parsed.window.end && parsed.window.end < addDays(today, -1)) continue;
+      when = { window: parsed.window };
+    }
+    const sub = await listFolder(f.id);
+    if (!sub.recognized) throw new Error(`Drive subfolder page not recognised ("${f.name}")`);
+    out.push({ name: f.name, entries: sub.entries, ...when });
+  }
+  return out;
+}
+
+const DRIVE_REREAD_COOLDOWN_MS = 60_000;
+let lastDriveReread = 0;
+
+/**
+ * A listed image couldn't be fetched from Google (moved out of the folder, or deleted), so
+ * the cached listing is probably out of date: expire it so the next read lists Drive again.
+ * At most once a minute per server instance. Returns whether it expired the listing.
+ */
+export function rereadDriveSoon(now = Date.now()): boolean {
+  if (now - lastDriveReread < DRIVE_REREAD_COOLDOWN_MS) return false;
+  lastDriveReread = now;
+  revalidateTag(SOURCE_TAGS.drive, { expire: 0 });
+  return true;
+}
 
 async function loadDrive(
   folderId: string,
@@ -66,7 +119,12 @@ async function loadDrive(
   const today = dayInTz(Date.now(), timezone);
   const folders: DriveSnapshot["folders"] = [];
   let emergency: DriveEntry[] = [];
+  let holidays: HolidayFolder[] = [];
   for (const f of rootListing.entries.filter((e) => e.isFolder)) {
+    if (isHolidaysFolder(f.name)) {
+      holidays = holidays.concat(await loadHolidayFolders(f.id, today));
+      continue;
+    }
     if (isEmergencyFolder(f.name)) {
       const listing = await listFolder(f.id);
       if (!listing.recognized)
@@ -95,6 +153,7 @@ async function loadDrive(
     root: rootListing.entries,
     emergency,
     folders,
+    holidays,
     override,
     fetchedAt: Date.now(),
   };
@@ -186,15 +245,23 @@ export const isEmergencyFolder = (name: string) =>
   name.trim().replace(/\s+/g, " ").toLowerCase() ===
   EMERGENCY_FOLDER.toLowerCase();
 
+/** The root subfolder holding one folder per holiday. */
+export const HOLIDAYS_FOLDER = "Holidays";
+export const isHolidaysFolder = (name: string) =>
+  name.trim().replace(/\s+/g, " ").toLowerCase() === HOLIDAYS_FOLDER.toLowerCase();
+
 /**
- * Pure assembly of the image list: root first, then folders by name; ended windows dropped.
- * If the Emergency Override folder has images, the list is only those (by name), always shown.
+ * Pure assembly of the image list: holidays first (soonest holiday first, then the
+ * "Holidays" folders with ordinary date names, by name), then root, then folders by name;
+ * ended windows dropped. If the Emergency Override folder has images, the list is only
+ * those (by name), always shown.
  */
 export function assembleImages(
-  snapshot: Pick<DriveSnapshot, "root" | "folders"> & {
+  snapshot: Pick<DriveSnapshot, "root" | "folders" | "holidays"> & {
     emergency?: DriveEntry[];
   },
   today: string,
+  holidayDays: CoreSettings["holidays"] = defaultSettings.holidays,
 ): PlaylistImage[] {
   const images: PlaylistImage[] = [];
   const add = (entries: DriveEntry[], w: DateWindow) => {
@@ -205,6 +272,7 @@ export function assembleImages(
         start: w.start,
         end: w.end,
         ...(w.yearly ? { yearly: w.yearly } : {}),
+        ...(w.holiday ? { holiday: w.holiday } : {}),
         ...(e.modified ? { version: fileVersion(e.modified) } : {}),
       });
     }
@@ -213,6 +281,18 @@ export function assembleImages(
   if (emergency.length > 0) {
     add(emergency, { start: null, end: null });
     return images;
+  }
+  const holidays = (snapshot.holidays ?? []).map((h) => {
+    if (!h.rule) return { h, window: h.window, sortKey: "~" };
+    const holiday = { rule: h.rule, before: holidayDays.daysBefore, after: holidayDays.daysAfter };
+    const window: DateWindow = { start: null, end: null, holiday };
+    return { h, window, sortKey: holidayOccurrence(holiday, today)?.date ?? "~" };
+  });
+  // Plain comparison: dates sort as text, and "~" (no date) sorts after them.
+  holidays.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : byName(a.h, b.h)));
+  for (const { h, window } of holidays) {
+    if (window.end !== null && window.end < today) continue;
+    add(h.entries, window);
   }
   add(snapshot.root, { start: null, end: null });
   for (const f of [...snapshot.folders].sort(byName)) {
@@ -298,7 +378,7 @@ export async function getPlaylist(): Promise<Playlist> {
     (e) => e.end >= now,
   );
   const images = drive
-    ? assembleImages(drive, dayInTz(now, config.timezone))
+    ? assembleImages(drive, dayInTz(now, config.timezone), config.holidays)
     : [];
   const emergency = !!drive && (drive.emergency ?? []).some(isImageEntry);
   return {

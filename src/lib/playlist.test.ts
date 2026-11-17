@@ -4,7 +4,9 @@ import {
   assembleImages,
   readOverride,
   isEmergencyFolder,
+  isHolidaysFolder,
 } from "@/lib/playlist";
+import { isActiveOnDay } from "@/lib/folderDates";
 
 const file = (id: string, name: string, mime: string | null): DriveEntry => ({
   id,
@@ -233,5 +235,55 @@ describe("assembleImages", () => {
     );
     expect(out.map((i) => i.id)).toEqual(["r1", "r2", "w1", "m1"]);
     expect(out[2]).toMatchObject({ start: "2026-03-01", end: "2026-03-02" });
+  });
+});
+
+describe("Holidays folder", () => {
+  const img = (id: string, name = `${id}.png`) => ({ id, name, mime: "image/png", isFolder: false });
+  const snapshot = {
+    root: [img("r1")],
+    folders: [],
+    holidays: [
+      { name: "January 1 - New Year's Day", rule: { kind: "date" as const, month: 1, day: 1 }, entries: [img("nyd")] },
+      { name: "December 31 - New Year's Eve", rule: { kind: "date" as const, month: 12, day: 31 }, entries: [img("nye")] },
+      {
+        name: "Fourth Thursday in November - Thanksgiving",
+        rule: { kind: "weekday" as const, month: 11, weekday: 4, nth: 4 },
+        entries: [img("tg")],
+      },
+      {
+        name: "0000-12-01 0000-12-31 - Happy Holidays",
+        window: { start: null, end: null, yearly: { from: "12-01", to: "12-31" } },
+        entries: [img("hh")],
+      },
+      { name: "2026-01-01 - Old", window: { start: null, end: "2026-01-01" }, entries: [img("old")] },
+    ],
+  };
+  it("recognises the folder name loosely", () => {
+    expect(isHolidaysFolder(" holidays ")).toBe(true);
+    expect(isHolidaysFolder("Holiday")).toBe(false);
+  });
+  it("puts holidays first, soonest first, then date-named ones, then the root", () => {
+    const out = assembleImages(snapshot, "2026-11-17");
+    expect(out.map((i) => i.id)).toEqual(["tg", "nye", "nyd", "hh", "r1"]);
+    expect(out[0].holiday).toEqual({ rule: snapshot.holidays[2].rule, before: 7, after: 1 });
+  });
+  it("only the current holidays are active", () => {
+    const out = assembleImages(snapshot, "2026-12-28");
+    const active = (day: string) => out.filter((i) => isActiveOnDay(i, day)).map((i) => i.id);
+    expect(active("2026-11-17")).toEqual(["r1"]);
+    expect(active("2026-11-20")).toEqual(["tg", "r1"]);
+    expect(active("2026-12-28")).toEqual(["nye", "nyd", "hh", "r1"]);
+  });
+  it("uses the configured day counts", () => {
+    const out = assembleImages(snapshot, "2026-11-17", { daysBefore: 2, daysAfter: 0 });
+    const tg = out.find((i) => i.id === "tg")!;
+    expect(isActiveOnDay(tg, "2026-11-23")).toBe(false);
+    expect(isActiveOnDay(tg, "2026-11-24")).toBe(true);
+    expect(isActiveOnDay(tg, "2026-11-27")).toBe(false);
+  });
+  it("Emergency Override still wins", () => {
+    const out = assembleImages({ ...snapshot, emergency: [img("e1")] }, "2026-11-25");
+    expect(out.map((i) => i.id)).toEqual(["e1"]);
   });
 });

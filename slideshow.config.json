@@ -9,5 +9,6 @@
   },
   "refresh": { "sourceMinutes": 60, "playlistMinutes": 10, "pageReloadHours": 6 },
   "offline": { "showIndicator": true },
-  "weather": { "enabled": true, "units": "fahrenheit", "displaySeconds": 15, "title": "Weather" }
+  "weather": { "enabled": true, "units": "fahrenheit", "displaySeconds": 15, "title": "Weather" },
+  "holidays": { "daysBefore": 7, "daysAfter": 1 }
 }

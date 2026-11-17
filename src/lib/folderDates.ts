@@ -1,4 +1,5 @@
 import { dayInTz, isValidDay, lastDayOfMonth, type Day } from "./dates";
+import { isHolidayActive, type HolidayWindow } from "./holidays";
 
 /** Month and day, "MM-DD". */
 export type MonthDay = string;
@@ -7,11 +8,14 @@ export type MonthDay = string;
  * Inclusive date window. `null` means unbounded on that side.
  * `yearly` (from "0000-…" folder names) repeats every year and ignores `start`/`end`;
  * `from` > `to` means it wraps over New Year (e.g. 12-15 → 01-05).
+ * `holiday` (from the "Holidays" folder) repeats every year around a holiday's date, and
+ * also ignores `start`/`end`.
  */
 export type DateWindow = {
   start: Day | null;
   end: Day | null;
   yearly?: { from: MonthDay; to: MonthDay };
+  holiday?: HolidayWindow;
 };
 
 export const ALWAYS: DateWindow = { start: null, end: null };
@@ -105,6 +109,7 @@ export function parseFolderName(name: string): ParsedFolder {
 }
 
 export function isActiveOnDay(window: DateWindow, today: Day): boolean {
+  if (window.holiday) return isHolidayActive(window.holiday, today);
   if (window.yearly) {
     const md = today.slice(5);
     const { from, to } = window.yearly;

@@ -7,7 +7,7 @@ No Google API key is needed. The Drive folder and the calendar only have to be p
 ## Features
 
 - **Slideshow** from a Google Drive folder: full screen on black, cross-fade, 20 s per image.
-- **Date folders** decide when pictures show (`2026-12`, `2026-12-01 2026-12-31`, or every year with `0000-06-15 0000-07-05`), plus an **Emergency Override** folder that replaces everything while it has pictures.
+- **Date folders** decide when pictures show (`2026-12`, `2026-12-01 2026-12-31`, or every year with `0000-06-15 0000-07-05`), a **Holidays** folder for pictures that show around each holiday every year (`Last Monday in May`, `July 4`), plus an **Emergency Override** folder that replaces everything while it has pictures.
 - **Upcoming events** from Google Calendar after every 5 images, paged, with multi-day events.
 - **Weather**: today large and the next 4 days, from Open-Meteo, by ZIP code.
 - **Works offline**: screens keep running from saved content, and update themselves after a new deploy.
@@ -31,7 +31,7 @@ npm run dev                   # http://localhost:3000
 | Guide | What's in it |
 |---|---|
 | [Setup](docs/setup.md) | Local development, scripts, environment variables |
-| [Google Drive](docs/google-drive.md) | Making the folder public, date folders, Emergency Override, replacing pictures |
+| [Google Drive](docs/google-drive.md) | Making the folder public, date folders, Holidays, Emergency Override, replacing pictures |
 | [Google Calendar](docs/google-calendar.md) | Making the calendar public and finding its ID |
 | [Weather](docs/weather.md) | ZIP or coordinates, Open-Meteo terms, icon credits |
 | [Settings](docs/settings.md) | Every setting, and changing them from Drive with `config.json` |

@@ -1,3 +1,4 @@
+import { holidayRuleLabel } from "./holidays";
 import type { PlaylistImage } from "./types";
 
 const MONTHS = [
@@ -37,8 +38,13 @@ export function dayLabel(day: string, withYear = true): string {
 
 /** When an image shows, in words: "every year Jun 25th to Jul 5th", "until Dec 31st, 2026"… */
 export function windowLabel(
-  i: Pick<PlaylistImage, "start" | "end" | "yearly">,
+  i: Pick<PlaylistImage, "start" | "end" | "yearly" | "holiday">,
 ): string {
+  if (i.holiday) {
+    const { rule, before, after } = i.holiday;
+    const days = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
+    return `every year, ${days(before)} before to ${days(after)} after ${holidayRuleLabel(rule)}`;
+  }
   if (i.yearly) {
     const from = monthDayLabel(i.yearly.from);
     return i.yearly.from === i.yearly.to

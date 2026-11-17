@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { isValidDriveId, thumbnailUrl } from "@/lib/drive";
-import { getImageIds } from "@/lib/playlist";
+import { getImageIds, rereadDriveSoon } from "@/lib/playlist";
 
 const notFound = () => new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
 
@@ -17,6 +17,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     });
     const type = upstream.headers.get("content-type") ?? "";
     if (!upstream.ok || !type.startsWith("image/")) {
+      // Listed but not fetchable: the file probably left the folder since the last listing.
+      if (rereadDriveSoon()) console.warn(`[api/image] ${id} failed upstream (${upstream.status}); re-reading Drive`);
       return new Response("Bad upstream response", { status: 502, headers: { "Cache-Control": "no-store" } });
     }
     return new Response(await upstream.arrayBuffer(), {

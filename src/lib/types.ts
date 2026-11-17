@@ -1,5 +1,6 @@
 import type { Settings } from "./config";
 import type { Day } from "./dates";
+import type { HolidayWindow } from "./holidays";
 
 export type PlaylistImage = {
   id: string;
@@ -9,6 +10,8 @@ export type PlaylistImage = {
   end: Day | null;
   /** Repeats every year ("MM-DD" bounds); set for "0000-…" folders. */
   yearly?: { from: string; to: string };
+  /** Repeats every year around a holiday; set for folders inside "Holidays". */
+  holiday?: HolidayWindow;
   /** Changes when the file is replaced in Drive; part of the image URL so caches refresh. */
   version?: string;
 };

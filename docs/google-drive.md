@@ -30,6 +30,19 @@ Dates are whole days (inclusive) in `TIMEZONE`. Any other folder name is ignored
 
 For the people who manage the pictures, [`docs/HOW-TO-USE-THIS-FOLDER.txt`](HOW-TO-USE-THIS-FOLDER.txt) explains these rules in plain language. Copy it into the root of the Drive folder; text files are never shown on screen.
 
+## Holidays folder
+
+Make a folder named **`Holidays`** in the root, with one folder inside it per holiday. The inner folder's name says when the holiday is; its pictures show every year from `holidays.daysBefore` (7) days before the holiday through `holidays.daysAfter` (1) day after it, inclusive, in `TIMEZONE`.
+
+| Folder name inside `Holidays` | Holiday |
+|---|---|
+| `July 4`, `Dec 31`, `June 19th` | that date every year |
+| `Third Monday in February`, `3rd Mon of Feb` | the nth (first to fourth) weekday of the month |
+| `Last Monday in May` | the last such weekday of the month |
+| `0000-12-01 0000-12-31` (any date-folder name) | exactly those dates, no days added |
+
+Case doesn't matter; months and weekdays can be full names or three letters. A ` - description` after the date is ignored (`Fourth Thursday in November - Thanksgiving`). Windows can cross New Year (`January 1` shows Dec 25 – Jan 2). Holiday pictures play first, soonest holiday first, then the root pictures and date folders. Dates are calendar dates, not federal "observed" weekdays. Folders it can't read are ignored and logged. Emergency Override still replaces everything.
+
 ## Emergency Override folder
 
 Make a folder named **`Emergency Override`** in the root of the Drive folder. While it holds at least one image, screens show **only** those images (in name order) and skip everything else, including the calendar and weather. Delete or move the images out and the normal slideshow comes back. An empty folder does nothing, so it can stay in place, ready to use.

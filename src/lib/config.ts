@@ -29,6 +29,10 @@ const schema = z.object({
     displaySeconds: z.number().min(5).max(3600),
     title: z.string().min(1).max(80),
   }),
+  holidays: z.object({
+    daysBefore: int(0, 60),
+    daysAfter: int(0, 60),
+  }),
 });
 
 export type CoreSettings = z.infer<typeof schema>;
