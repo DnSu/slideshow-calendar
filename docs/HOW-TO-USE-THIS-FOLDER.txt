@@ -43,9 +43,22 @@ works every year without being changed.
 Don't mix: "0000-06-15 2026-07-05" will not work.
 
 
+EMERGENCY OVERRIDE
+------------------
+A folder named exactly "Emergency Override" is special. While it has
+any pictures in it, the screens show ONLY those pictures, and nothing
+else: no other pictures, no calendar, no weather. Take the pictures
+out (or delete them) and the screens go back to normal. Leave the
+folder empty when there's no emergency.
+
+It can take up to about an hour and a half to appear on the screens.
+To make it faster, open the website's /slideshow page and press
+Refresh: the screens then change within about 10 minutes.
+
+
 4. THINGS TO KNOW
 -----------------
-- Folders with any other name are ignored. Nothing in them shows.
+- Apart from "Emergency Override", folders with any other name are ignored. Nothing in them shows.
   Examples that will NOT work: "December", "2026-13-01",
   "2026-12-31 2026-12-01" (ends before it starts), "12-25".
 - Only one level of folders. A folder inside a date folder is ignored.

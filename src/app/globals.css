@@ -1,466 +1,108 @@
 :root {
+  /* Screen units: 1% of the screen. Previews redefine these to scale content to their frame. */
   --vh: 1vh;
   --vw: 1vw;
+
+  /* Type */
+  /* Inter is loaded by next/font in layout.tsx (--font-inter); the rest are fallbacks. */
+  --font-sans:
+    var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Signage screen (slides, calendar, weather) */
+  --color-bg: #000;
+  --color-text: #fff;
+  --color-text-soft: #d4d4d4; /* weather highs */
+  --color-text-muted: #ccc; /* event locations */
+  --color-text-dim: #aaa; /* descriptions, weather lows */
+  --color-text-faint: #8f8f8f; /* weather details */
+  --color-text-subtle: #777; /* footers and credits */
+  --color-accent: #ffd166; /* gold: day headings, multi-day bar, active toggles */
+  --color-info: #9fd3ff; /* light blue: event times, rain chance */
+  --color-warning: #f5a524; /* offline dot */
+  --color-rule: #444;
+  --color-rule-faint: #262626;
+
+  /* Developer preview chrome (/slideshow, /calendar, /weather) */
+  --ui-bg: #1b1b1f;
+  --ui-bar: #141417;
+  --ui-border: #2e2e34;
+  --ui-text-strong: #fff;
+  --ui-text: #ddd;
+  --ui-text-soft: #ccc;
+  --ui-text-dim: #bbb;
+  --ui-text-muted: #888;
+  --ui-button: #2a2a30;
+  --ui-button-hover: #3a3a42;
+  --ui-button-border: #555;
+  --ui-toggle-border: #444;
+  --ui-frame-edge: #333;
+  --ui-shadow: rgba(0, 0, 0, 0.6);
+  --ui-alert: #ff6b6b; /* "Emergency Override active" */
+}
+
+/* Reset: same starting point in every browser. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  line-height: 1.2;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+svg,
+video,
+canvas,
+picture {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  list-style: none;
+  padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  overflow-wrap: break-word;
 }
 
 html,
 body {
-  margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
-  background: #000;
-  color: #fff;
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow: hidden;
   cursor: none;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
-.player {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  overflow: hidden;
-}
-
-.layer {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  animation-name: fade-in;
-  animation-timing-function: ease-in-out;
-  animation-fill-mode: both;
-}
-
-.layer img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: #000;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.offline-dot {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #f5a524;
-  opacity: 0.6;
-}
-
-/* Calendar: sized in screen units (--vh/--vw = 1% of the screen) so it stays readable from
-   across a room. Previews set --vh/--vw to 1% of their frame instead. */
-.calendar {
-  box-sizing: border-box;
-  height: 100%;
-  padding: calc(4 * var(--vh)) calc(5 * var(--vw));
-  display: flex;
-  flex-direction: column;
-  background: #000;
-  color: #fff;
-  overflow: hidden;
-}
-
-.calendar-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: calc(2 * var(--vw));
-  margin: 0 0 calc(4 * var(--vh));
-}
-
-.calendar-page {
-  font-size: calc(2.4 * var(--vh));
-  opacity: 0.6;
-  white-space: nowrap;
-}
-
-.calendar h1 {
-  margin: 0;
-  font-size: calc(5 * var(--vh));
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.calendar-days {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.calendar-day h2 {
-  margin: 0 0 calc(2.2 * var(--vh));
-  padding-bottom: calc(0.8 * var(--vh));
-  border-bottom: calc(0.3 * var(--vh)) solid #444;
-  font-size: calc(2.9 * var(--vh));
-  font-weight: 600;
-  color: #ffd166;
-}
-
-.calendar-day + .calendar-day {
-  margin-top: calc(5.5 * var(--vh));
-}
-
-.calendar ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.calendar li {
-  display: flex;
-  gap: calc(3 * var(--vw));
-  margin: 0 0 calc(2.6 * var(--vh));
-}
-
-.event-time {
-  flex: 0 0 calc(12 * var(--vw));
-  font-size: calc(2.7 * var(--vh));
-  font-weight: 600;
-  color: #9fd3ff;
-}
-
-.event-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.event-title {
-  font-size: calc(3.2 * var(--vh));
-  font-weight: 600;
-  line-height: 1.2;
-  margin-bottom: calc(0.4 * var(--vh));
-}
-
-/* Multi-day events: a date-range line under the title and an accent bar on the left. */
-.event-span {
-  font-size: calc(2.3 * var(--vh));
-  font-weight: 600;
-  color: #ffd166;
-  margin-bottom: calc(0.3 * var(--vh));
-}
-
-.calendar li.multi-day .event-body {
-  border-left: calc(0.4 * var(--vh)) solid #ffd166;
-  padding-left: calc(1.2 * var(--vw));
-}
-
-.event-location {
-  font-size: calc(2.3 * var(--vh));
-  margin-bottom: calc(0.3 * var(--vh));
-  color: #ccc;
-}
-
-.event-description {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-size: calc(2.2 * var(--vh));
-  line-height: 1.35;
-  color: #aaa;
-}
-
-/* Developer previews (/slideshow, /calendar) */
-.preview-notice {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5vw;
-  text-align: center;
-  font-size: 3vh;
-  color: #bbb;
-}
-
-/* Shared shell: a menu on top, then a portrait 9:16 frame with controls below it. */
-.preview-shell {
-  --nav: 48px;
-  --controls: 96px;
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  background: #1b1b1f;
-  cursor: auto;
-  font-family: system-ui, sans-serif;
-}
-
-.preview-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--nav);
-  flex: none;
-  padding: 0 16px;
-  box-sizing: border-box;
-  border-bottom: 1px solid #2e2e34;
-  background: #141417;
-  font-size: 14px;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.preview-nav-title {
-  margin-right: 10px;
-  font-weight: 600;
-  color: #888;
-}
-
-.preview-nav a {
-  padding: 6px 12px;
-  border-radius: 6px;
-  color: #ccc;
-  text-decoration: none;
-}
-
-.preview-nav a:hover {
-  background: #2a2a30;
-  color: #fff;
-}
-
-.preview-nav a.active {
-  background: #3a3a42;
-  color: #fff;
-}
-
-.preview-nav .preview-nav-toggle {
-  margin-left: auto;
-  border: 1px solid #444;
-}
-
-.preview-nav .preview-nav-toggle.active {
-  border-color: #ffd166;
-  background: transparent;
-  color: #ffd166;
-}
-
-.preview-page {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-.preview-frame {
-  /* Largest 9:16 frame that fits beside the controls. 1% of its height/width: */
-  --vh: calc(min(100vh - var(--nav) - var(--controls) - 44px, (100vw - 32px) * 16 / 9) / 100);
-  --vw: calc(var(--vh) * 9 / 16);
-  position: relative;
-  height: calc(100 * var(--vh));
-  width: calc(100 * var(--vw));
-  flex: none;
-  background: #000;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px #333, 0 8px 32px rgba(0, 0, 0, 0.6);
-}
-
-.preview-frame .preview-notice {
-  font-size: calc(2.5 * var(--vh));
-}
-
-.preview-controls {
-  /* Fixed height so the buttons stay put however long the info line is. */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  height: var(--controls);
-  width: 100%;
-  flex: none;
-  font-size: 14px;
-  color: #ddd;
-}
-
-.preview-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: nowrap;
-}
-
-.preview-controls button {
-  min-width: 96px; /* same width for Play / Pause so nothing shifts */
-  font: inherit;
-  padding: 8px 16px;
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: #2a2a30;
-  color: #fff;
-  cursor: pointer;
-}
-
-.preview-controls button:hover:not(:disabled) {
-  background: #3a3a42;
-}
-
-.preview-controls button.active {
-  border-color: #ffd166;
-  color: #ffd166;
-}
-
-.preview-controls button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.preview-info {
-  max-width: min(560px, 100%);
-  max-height: 2.8em;
-  overflow: hidden;
-  line-height: 1.4;
-  text-align: center;
-  color: #bbb;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Weather slide: same screen-unit sizing as the calendar (--vh/--vw), black with soft gray icons.
-   --weather-bg is what overlapping icon shapes are filled with; it must match the background. */
-.weather {
-  --weather-bg: #000;
-  box-sizing: border-box;
-  height: 100%;
-  padding: calc(4 * var(--vh)) calc(6 * var(--vw)) calc(3 * var(--vh));
-  display: flex;
-  flex-direction: column;
-  background: var(--weather-bg);
-  color: #fff;
-  overflow: hidden;
-  font-variant-numeric: tabular-nums;
-}
-
-.weather-header h1 {
-  margin: 0;
-  font-size: calc(4.6 * var(--vh));
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.weather-date {
-  margin-top: calc(0.8 * var(--vh));
-  font-size: calc(3 * var(--vh));
-  font-weight: 600;
-  color: #ffd166;
-}
-
-.weather-today {
-  flex: 1;
-  min-height: 0;
-  padding: calc(3 * var(--vh)) calc(3 * var(--vw)) calc(4 * var(--vh));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.weather-today-icon {
-  /* The drawings have empty margins inside their square; trim them so the icon sits close to the number. */
-  width: calc(22 * var(--vh));
-  height: calc(22 * var(--vh));
-  margin: calc(-3.5 * var(--vh)) 0 calc(-2 * var(--vh));
-  color: #fff;
-}
-
-.weather-temp {
-  font-size: calc(11 * var(--vh));
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: calc(4.5 * var(--vh));
-}
-
-.weather-condition {
-  font-size: calc(3.6 * var(--vh));
-  font-weight: 600;
-  margin-bottom: calc(4 * var(--vh));
-}
-
-/* Two quiet lines of small, soft gray, widely spaced. */
-.weather-detail {
-  font-size: calc(2.2 * var(--vh));
-  letter-spacing: 0.08em;
-  color: #8f8f8f;
-}
-
-.weather-detail + .weather-detail {
-  margin-top: calc(1.6 * var(--vh));
-}
-
-.weather-detail-row {
-  display: flex;
-  justify-content: center;
-  gap: calc(4 * var(--vw));
-}
-
-.weather-days {
-  flex: 0 0 calc(21 * var(--vh));
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.weather-days li {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr 2fr;
-  align-items: center;
-  border-top: calc(0.2 * var(--vh)) solid #262626;
-  font-size: calc(3 * var(--vh));
-}
-
-.weather-day-name {
-  font-weight: 700;
-  color: #ffd166;
-}
-
-.weather-day-icon {
-  width: calc(7.5 * var(--vh));
-  height: calc(7.5 * var(--vh));
-  margin: calc(-1 * var(--vh)) 0;
-  color: #d4d4d4;
-}
-
-.weather-day-rain {
-  color: #9fd3ff;
-  text-align: right;
-  padding-right: calc(4 * var(--vw));
-}
-
-.weather-day-temps {
-  text-align: right;
-  font-weight: 700;
-}
-
-.weather-day-low {
-  font-weight: 400;
-  color: #aaa;
-}
-
-.weather-footer {
-  flex: none;
-  margin-top: calc(2 * var(--vh));
-  font-size: calc(1.45 * var(--vh));
-  color: #777;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-family: var(--font-sans);
 }

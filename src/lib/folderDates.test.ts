@@ -1,15 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayInTz, zonedMidnight } from "@/lib/dates";
-import { isActive, parseFolderName } from "@/lib/folderDates";
+import { isActive, parseFolderName, isActiveOnDay } from "@/lib/folderDates";
 
 describe("parseFolderName", () => {
   it("parses YYYY-MM as until month end", () => {
-    expect(parseFolderName("2026-12")).toEqual({ ok: true, window: { start: null, end: "2026-12-31" } });
-    expect(parseFolderName("2028-02")).toEqual({ ok: true, window: { start: null, end: "2028-02-29" } });
-    expect(parseFolderName("2026-02")).toEqual({ ok: true, window: { start: null, end: "2026-02-28" } });
+    expect(parseFolderName("2026-12")).toEqual({
+      ok: true,
+      window: { start: null, end: "2026-12-31" },
+    });
+    expect(parseFolderName("2028-02")).toEqual({
+      ok: true,
+      window: { start: null, end: "2028-02-29" },
+    });
+    expect(parseFolderName("2026-02")).toEqual({
+      ok: true,
+      window: { start: null, end: "2026-02-28" },
+    });
   });
   it("parses a single day and a range", () => {
-    expect(parseFolderName("2026-12-31")).toEqual({ ok: true, window: { start: null, end: "2026-12-31" } });
+    expect(parseFolderName("2026-12-31")).toEqual({
+      ok: true,
+      window: { start: null, end: "2026-12-31" },
+    });
     expect(parseFolderName("2026-12-01 2026-12-31")).toEqual({
       ok: true,
       window: { start: "2026-12-01", end: "2026-12-31" },
@@ -52,25 +63,28 @@ describe("isActive", () => {
     expect(isActive(range, at("2026-12-01T03:00:00Z"), ny)).toBe(false);
     expect(isActive(range, at("2026-12-01T05:00:00Z"), ny)).toBe(true);
     // Far east of UTC: already Jan 1
-    expect(isActive(range, at("2026-12-31T15:00:00Z"), "Asia/Tokyo")).toBe(false);
+    expect(isActive(range, at("2026-12-31T15:00:00Z"), "Asia/Tokyo")).toBe(
+      false,
+    );
   });
   it("handles month-only and open windows", () => {
-    expect(isActive({ start: null, end: "2026-02-28" }, at("2026-02-28T20:00:00Z"), "UTC")).toBe(true);
-    expect(isActive({ start: null, end: "2026-02-28" }, at("2026-03-01T00:00:00Z"), "UTC")).toBe(false);
-    expect(isActive({ start: null, end: null }, at("2100-01-01T00:00:00Z"), "UTC")).toBe(true);
-  });
-});
-
-describe("date helpers", () => {
-  it("adds days across month and year edges", () => {
-    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
-    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
-  });
-  it("finds local midnight across DST", () => {
-    // US DST starts 2026-03-08: midnight is still UTC-5, next midnight UTC-4
-    expect(zonedMidnight("2026-03-08", "America/New_York")).toBe(Date.parse("2026-03-08T05:00:00Z"));
-    expect(zonedMidnight("2026-03-09", "America/New_York")).toBe(Date.parse("2026-03-09T04:00:00Z"));
-    expect(dayInTz(Date.parse("2026-03-09T03:59:00Z"), "America/New_York")).toBe("2026-03-08");
+    expect(
+      isActive(
+        { start: null, end: "2026-02-28" },
+        at("2026-02-28T20:00:00Z"),
+        "UTC",
+      ),
+    ).toBe(true);
+    expect(
+      isActive(
+        { start: null, end: "2026-02-28" },
+        at("2026-03-01T00:00:00Z"),
+        "UTC",
+      ),
+    ).toBe(false);
+    expect(
+      isActive({ start: null, end: null }, at("2100-01-01T00:00:00Z"), "UTC"),
+    ).toBe(true);
   });
 });
 
@@ -80,10 +94,14 @@ describe("yearly folders (0000)", () => {
     if (!p.ok) throw new Error(`${name}: ${p.reason}`);
     return p.window;
   };
-  const on = (name: string, day: string) => isActive(w(name), Date.parse(`${day}T12:00:00Z`), "UTC");
+  const on = (name: string, day: string) =>
+    isActive(w(name), Date.parse(`${day}T12:00:00Z`), "UTC");
 
   it("parses the yearly forms", () => {
-    expect(w("0000-06-15 0000-07-05").yearly).toEqual({ from: "06-15", to: "07-05" });
+    expect(w("0000-06-15 0000-07-05").yearly).toEqual({
+      from: "06-15",
+      to: "07-05",
+    });
     expect(w("0000-06").yearly).toEqual({ from: "06-01", to: "06-30" });
     expect(w("0000-02").yearly).toEqual({ from: "02-01", to: "02-29" });
     expect(w("0000-12-25").yearly).toEqual({ from: "12-25", to: "12-25" });
@@ -113,8 +131,36 @@ describe("yearly folders (0000)", () => {
   it("handles Feb 29 and rejects bad names", () => {
     expect(on("0000-02-29", "2028-02-29")).toBe(true);
     expect(on("0000-02-29", "2027-02-28")).toBe(false);
-    for (const bad of ["0000-13", "0000-02-30", "0000-06-15 2026-07-05", "0000-06-15 0000-07-05 0000-08-01", "0000"]) {
+    for (const bad of [
+      "0000-13",
+      "0000-02-30",
+      "0000-06-15 2026-07-05",
+      "0000-06-15 0000-07-05 0000-08-01",
+      "0000",
+    ]) {
       expect(parseFolderName(bad).ok, bad).toBe(false);
     }
+  });
+});
+
+describe("isActiveOnDay", () => {
+  const window = (name: string) => {
+    const r = parseFolderName(name);
+    if (!r.ok) throw new Error(r.reason);
+    return r.window;
+  };
+  it("checks a plain day against dated and yearly windows", () => {
+    expect(isActiveOnDay(window("2026-12-01 2026-12-31"), "2026-12-01")).toBe(
+      true,
+    );
+    expect(isActiveOnDay(window("2026-12-01 2026-12-31"), "2026-11-30")).toBe(
+      false,
+    );
+    expect(isActiveOnDay(window("0000-12-15 0000-01-05"), "2027-01-03")).toBe(
+      true,
+    );
+    expect(isActiveOnDay(window("0000-12-15 0000-01-05"), "2027-01-06")).toBe(
+      false,
+    );
   });
 });

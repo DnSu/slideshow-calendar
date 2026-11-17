@@ -1,7 +1,13 @@
 import { weatherIconSvg, type WeatherIconName } from "./weather-icons/icons";
 
 /** A Meteocons icon drawn inline (so currentColor works and nothing is fetched). Size it with CSS. */
-export default function WeatherIcon({ name, className }: { name: WeatherIconName; className?: string }) {
+export default function WeatherIcon({
+  name,
+  className,
+}: {
+  name: WeatherIconName;
+  className?: string;
+}) {
   return (
     <svg
       className={className}

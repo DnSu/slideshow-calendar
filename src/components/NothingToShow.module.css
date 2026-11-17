@@ -1,0 +1,56 @@
+/* Empty-screen message. Sized in screen units (--vh/--vw) so previews scale it with their frame. */
+
+.nothing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(8 * var(--vh)) calc(9 * var(--vw));
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.title {
+  font-size: calc(4.4 * var(--vh));
+  font-weight: 700;
+  margin-bottom: calc(1.6 * var(--vh));
+}
+
+.lead {
+  font-size: calc(2.2 * var(--vh));
+  color: var(--color-text-muted);
+  margin-bottom: calc(5 * var(--vh));
+}
+
+.reasons {
+  display: flex;
+  flex-direction: column;
+  gap: calc(3.2 * var(--vh));
+}
+
+.source {
+  font-size: calc(1.8 * var(--vh));
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: calc(0.6 * var(--vh));
+}
+
+.text {
+  font-size: calc(2.5 * var(--vh));
+  line-height: 1.35;
+}
+
+.hint {
+  font-size: calc(1.8 * var(--vh));
+  color: var(--color-text-dim);
+  margin-top: calc(0.4 * var(--vh));
+}
+
+.footer {
+  margin-top: calc(6 * var(--vh));
+  font-size: calc(1.7 * var(--vh));
+  color: var(--color-text-subtle);
+}

@@ -1,0 +1,50 @@
+/* Preview menu. Colors and fonts come from the variables in src/app/globals.css. */
+
+.previewNav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--nav);
+  flex: none;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-bar);
+  font-size: 14px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.previewNavTitle {
+  margin-right: 10px;
+  font-weight: 600;
+  color: var(--ui-text-muted);
+}
+
+.previewNav a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--ui-text-soft);
+  text-decoration: none;
+}
+
+.previewNav a:hover {
+  background: var(--ui-button);
+  color: var(--ui-text-strong);
+}
+
+.previewNav a.active {
+  background: var(--ui-button-hover);
+  color: var(--ui-text-strong);
+}
+
+.previewNav .previewNavToggle {
+  margin-left: auto;
+  border: 1px solid var(--ui-toggle-border);
+}
+
+.previewNav .previewNavToggle.active {
+  border-color: var(--color-accent);
+  background: transparent;
+  color: var(--color-accent);
+}

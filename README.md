@@ -25,19 +25,19 @@ cp .env.example .env.local   # then edit the values
 npm run dev                   # http://localhost:3000
 ```
 
-Other scripts: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+Other scripts: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:coverage`, `npm run build`.
 
 ### Environment variables
 
 | Variable | Required | Meaning |
 |---|---|---|
-| `DRIVE_FOLDER_ID` | yes | ID of the public Drive folder |
-| `CALENDAR_ID` | yes | ID of the public Google Calendar |
+| `DRIVE_FOLDER_ID` | for pictures | ID of the public Drive folder |
+| `CALENDAR_ID` | for events | ID of the public Google Calendar |
 | `TIMEZONE` | no (default `UTC`) | IANA timezone for folder dates and event times, e.g. `America/New_York` |
 
 Optional weather location (see below): `WEATHER_ZIP` (+ `WEATHER_COUNTRY`, default `US`), or `WEATHER_LATITUDE` + `WEATHER_LONGITUDE`.
 
-Locally they live in `.env.local` (gitignored). On Vercel, set them under Project, Settings, Environment Variables. Only `.env.example`, with placeholders, is committed. The IDs and the calendar feed URL are never sent to the browser. If a required variable is missing, `/api/playlist` answers with an error that names it.
+Locally they live in `.env.local` (gitignored). On Vercel, set them under Project, Settings, Environment Variables. Only `.env.example`, with placeholders, is committed. The IDs and the calendar feed URL are never sent to the browser. Each source is optional: a missing ID just turns that source off. If there's nothing at all to show, the screen says so instead of staying black, with a line per source explaining why (not set up, couldn't be reached, or simply empty) and which variable to set.
 
 ## Make the Drive folder public and find its ID
 
@@ -67,6 +67,12 @@ Dates are whole days (inclusive) in `TIMEZONE`. Any other folder name is ignored
 
 For the people who manage the pictures, [`docs/HOW-TO-USE-THIS-FOLDER.txt`](docs/HOW-TO-USE-THIS-FOLDER.txt) explains these rules in plain language. Copy it into the root of the Drive folder; text files are never shown on screen.
 
+### Emergency Override folder
+
+Make a folder named **`Emergency Override`** in the root of the Drive folder. While it holds at least one image, screens show **only** those images (in name order) and skip everything else, including the calendar and weather. Delete or move the images out and the normal slideshow comes back. An empty folder does nothing, so it can stay in place, ready to use.
+
+It goes out like any other change: within about 70 minutes on its own, or within about 10 minutes if someone presses **Refresh** on `/slideshow` after adding or removing the images. `/slideshow` shows "Emergency Override active" while it's on.
+
 ## Make the calendar public and find its ID
 
 1. In Google Calendar, open Settings, pick the calendar, Access permissions, tick **Make available to public** (events only need to be visible; "See all event details" shows titles, locations and descriptions).
@@ -91,6 +97,8 @@ Open-Meteo is free for **non-commercial** use (data under CC BY 4.0, hence the c
 ### Credits
 
 Weather data: [Open-Meteo.com](https://open-meteo.com) (CC BY 4.0). Icons: [Meteocons](https://github.com/basmilius/meteocons-poc) by Bas Milius (MIT), monochrome set, copied into `src/components/weather-icons/` with its license notice. To refresh them: `npm pack @meteocons/svg`, unpack it, and run `node scripts/import-meteocons.mjs <unpacked package dir>`. The script strips the animation, recolors to `currentColor` and prefixes ids; the package is not a dependency.
+
+Font: [Inter](https://fonts.google.com/specimen/Inter) (SIL Open Font License), self-hosted by `next/font` at build time, so screens never contact Google for it and text looks the same on every player.
 
 ## Deploy to Vercel
 
@@ -133,7 +141,7 @@ The signage screen runs at `/`. Three preview pages share a menu at the top for 
 - **It never advances on its own.** Use **◀ Prev** / **Next ▶** (or the ← / → keys); Prev wraps from the first slide to the last, and Next from the last to the first. **Restart** goes back to slide 1.
 - **Refresh** makes the server read Drive, the calendar and the weather again right away, instead of waiting for its hourly refresh, then shows the new copy. Use it after adding, replacing or removing pictures. Screens get the fresh copy at their next playlist check (within `refresh.playlistMinutes`, 10 by default). The server accepts it at most every 30 seconds.
 - **Active now / All images** switches what the loop includes. **Active now** (the default) shows only the images on screen today. **All images** adds every-year folders outside their dates and folders whose dates haven't started yet, so you can check upcoming pictures; the line below the buttons marks those as "not on screen now". Folders that have ended are never included.
-- The line between the buttons shows the position ("Slide 2 of 6", counting images, calendar pages and weather), the image's date window (or the calendar page, or weather), and how long it stays up on the real screen.
+- The line between the buttons shows the position ("Slide 2 of 6", counting images, calendar pages and weather), when the image shows, in words such as "every year Jun 25th to Jul 5th" or "until Dec 31st, 2026" (or the calendar page, or weather), and how long it stays up on the real screen.
 
 **`/calendar`** shows only the calendar, drawn the way the screen draws it.
 
@@ -211,11 +219,14 @@ src/lib/eventLabels.ts       time and multi-day labels
 src/app/(preview)/           developer previews (calendar, slideshow, weather) and their shared menu
 src/app/api/playlist         playlist JSON
 src/app/api/image/[id]       image proxy
-src/components/              Player, CalendarSlide, WeatherSlide, OfflineDot, previews and PreviewNav
+src/components/              Player, CalendarSlide, WeatherSlide, OfflineDot, previews and PreviewNav,
+                             each with its styles in Foo.module.css
+src/app/globals.css          color and font variables, reset, page base
 src/components/weather-icons Meteocons icons (generated) and their license
 scripts/import-meteocons.mjs regenerates the icons
 public/sw.js                 service worker
-tests/                       vitest tests and fixtures (fake IDs only)
+src/**/*.test.ts             vitest tests, next to the code they test
+src/lib/__fixtures__/        sample Drive pages and calendar feeds for tests (fake IDs only)
 ```
 
 ## License

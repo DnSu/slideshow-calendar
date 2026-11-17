@@ -14,6 +14,7 @@ export function mergePlaylist(prev: Playlist | null, next: Playlist): Playlist {
   return {
     ...next,
     images: driveDown ? prev.images : next.images,
+    emergency: driveDown ? prev.emergency : next.emergency,
     config: driveDown ? { ...prev.config } : next.config,
     events: calendarDown ? prev.events : next.events,
     weather: weatherDown ? prev.weather : next.weather,

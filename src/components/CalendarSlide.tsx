@@ -3,6 +3,7 @@ import { addDays, dayInTz } from "@/lib/dates";
 import { eventPages } from "@/lib/events";
 import { isMultiDay, spanLabel, timeLabel } from "@/lib/eventLabels";
 import type { PlaylistEvent } from "@/lib/types";
+import styles from "./CalendarSlide.module.css";
 
 type Props = {
   events: PlaylistEvent[];
@@ -38,18 +39,18 @@ export default function CalendarSlide({
   const groups = pages[index] ?? [];
   const today = dayInTz(nowMs, timezone);
   return (
-    <div className="calendar">
-      <header className="calendar-header">
+    <div className={styles.calendar}>
+      <header className={styles.calendarHeader}>
         <h1>{calendar.title}</h1>
         {pages.length > 1 && (
-          <div className="calendar-page">
+          <div className={styles.calendarPage}>
             Page {index + 1} of {pages.length}
           </div>
         )}
       </header>
-      <div className="calendar-days">
+      <div className={styles.calendarDays}>
         {groups.map((g) => (
-          <section key={g.day} className="calendar-day">
+          <section key={g.day} className={styles.calendarDay}>
             <h2>{dayLabel(g.day, today)}</h2>
             <ul>
               {g.events.map((e) => {
@@ -57,19 +58,21 @@ export default function CalendarSlide({
                 return (
                   <li
                     key={e.id}
-                    className={isMultiDay(e) ? "multi-day" : undefined}
+                    className={isMultiDay(e) ? styles.multiDay : undefined}
                   >
-                    <div className="event-time">
+                    <div className={styles.eventTime}>
                       {timeLabel(e, g.day, timezone)}
                     </div>
-                    <div className="event-body">
-                      <div className="event-title">{e.title}</div>
-                      {span && <div className="event-span">{span}</div>}
+                    <div className={styles.eventBody}>
+                      <div className={styles.eventTitle}>{e.title}</div>
+                      {span && <div className={styles.eventSpan}>{span}</div>}
                       {e.location && (
-                        <div className="event-location">{e.location}</div>
+                        <div className={styles.eventLocation}>{e.location}</div>
                       )}
                       {e.description && (
-                        <div className="event-description">{e.description}</div>
+                        <div className={styles.eventDescription}>
+                          {e.description}
+                        </div>
                       )}
                     </div>
                   </li>

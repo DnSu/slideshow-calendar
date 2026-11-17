@@ -24,6 +24,9 @@ import { weatherView } from "@/lib/weatherView";
 import CalendarSlide from "./CalendarSlide";
 import WeatherSlide from "./WeatherSlide";
 import OfflineDot from "./OfflineDot";
+import styles from "./Player.module.css";
+import NothingToShow from "./NothingToShow";
+import { emptyReasons, type EmptyReason } from "@/lib/emptyState";
 
 /** `page` is the calendar page shown on this layer (images: 0). */
 type Layer = { key: number; slide: Slide; page: number; src: string };
@@ -35,10 +38,14 @@ export default function Player() {
   const [layers, setLayers] = useState<Layer[]>([]);
   const [nowMs, setNowMs] = useState(0);
   const [offline, setOffline] = useState(false);
+  // Why the screen is empty, when there's nothing to show (instead of a black screen).
+  const [empty, setEmpty] = useState<EmptyReason[] | null>(null);
   const playlistRef = useRef<Playlist | null>(null);
   const failedRef = useRef(false);
   // The version this page's code is. If the build didn't record one, the first live response sets it.
-  const knownRelease = useRef<string | null>(BUILT_RELEASE !== "dev" ? BUILT_RELEASE : null);
+  const knownRelease = useRef<string | null>(
+    BUILT_RELEASE !== "dev" ? BUILT_RELEASE : null,
+  );
 
   useEffect(() => {
     playlistRef.current = playlist;
@@ -188,9 +195,12 @@ export default function Player() {
           tz,
           pl.config.calendar,
         ).length;
-        const hasEvents = pageCount > 0;
+        // Emergency Override: only its images, no calendar or weather.
+        const hasEvents = !pl.emergency && pageCount > 0;
         const hasWeather =
-          pl.config.weather.enabled && weatherView(pl.weather, now, tz) !== null;
+          !pl.emergency &&
+          pl.config.weather.enabled &&
+          weatherView(pl.weather, now, tz) !== null;
         const after = pl.config.calendar.showAfterImages;
         setNowMs(now);
 
@@ -211,10 +221,20 @@ export default function Player() {
         if (!slide) {
           current = null;
           setLayers([]);
+          setEmpty(
+            emptyReasons(pl.sources, {
+              activeImages: ids.length,
+              totalImages: pl.images.length,
+              hasEvents,
+              hasWeather,
+              imagesFailed: ids.length > 0,
+            }),
+          );
           await sleep(10_000);
           continue;
         }
 
+        setEmpty(null);
         const page =
           slide.kind === "calendar" ? calendarTurns++ % pageCount : 0;
         const same =
@@ -261,11 +281,11 @@ export default function Player() {
 
   const cfg = playlist?.config;
   return (
-    <main className="player">
+    <main className={styles.player}>
       {layers.map((l) => (
         <div
           key={l.key}
-          className="layer"
+          className={styles.layer}
           style={{
             animationDuration: `${cfg?.slideshow.transitionMs ?? 1000}ms`,
           }}
@@ -301,6 +321,13 @@ export default function Player() {
           )}
         </div>
       ))}
+      {empty && layers.length === 0 && cfg && (
+        <NothingToShow
+          reasons={empty}
+          checkMinutes={cfg.refresh.playlistMinutes}
+        />
+      )}
+      {!playlist && offline && <NothingToShow unreachable />}
       {offline && cfg?.offline.showIndicator && playlist && <OfflineDot />}
     </main>
   );

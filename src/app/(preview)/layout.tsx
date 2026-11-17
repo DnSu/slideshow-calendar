@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import PreviewNav from "@/components/PreviewNav";
+import styles from "./layout.module.css";
+import navStyles from "@/components/PreviewNav.module.css";
 
 /**
  * Shared shell for the developer previews (/slideshow, /calendar). The menu lives here so it
@@ -11,8 +13,8 @@ export default function PreviewLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="preview-shell">
-      <Suspense fallback={<nav className="preview-nav" />}>
+    <div className={styles.previewShell}>
+      <Suspense fallback={<nav className={navStyles.previewNav} />}>
         <PreviewNav />
       </Suspense>
       {children}

@@ -66,8 +66,27 @@ export type Playlist = {
   weather?: PlaylistWeather | null;
   /** Server clock when this response was produced (ms). Used as a floor for the screen's clock. */
   serverTime: number;
-  /** Which sources failed with no earlier good copy, so the screen should keep what it has. */
   /** Deployment ID of the server that produced this response ("dev" locally). Never cached. */
   release: string;
+  /** Which sources failed with no earlier good copy, so the screen should keep what it has. */
   degraded: ("drive" | "calendar" | "weather")[];
+  /**
+   * True while the Drive "Emergency Override" folder has images: `images` is then only those,
+   * and screens skip the calendar and weather until the images are removed.
+   */
+  emergency?: boolean;
+  /** Why each source has (or hasn't) got content, so an empty screen can say why. */
+  sources: SourceStatuses;
+};
+
+/**
+ * ok: has content. empty: works but has nothing (no images, no upcoming events).
+ * unconfigured: its env var isn't set. disabled: turned off in settings. error: couldn't be read.
+ */
+export type SourceStatus =
+  "ok" | "empty" | "unconfigured" | "disabled" | "error";
+export type SourceStatuses = {
+  drive: SourceStatus;
+  calendar: SourceStatus;
+  weather: SourceStatus;
 };

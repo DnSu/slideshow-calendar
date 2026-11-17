@@ -15,6 +15,16 @@ Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen sli
 - Tests and fixtures use made-up IDs and fake sample data.
 - Before committing, check the diff for anything that looks like a real ID, URL, or email.
 
+## Styling
+- Colors and the font family are defined once, as CSS variables on `:root` at the top of `src/app/globals.css` (`--color-*` for the signage screen, `--ui-*` for the preview chrome, `--font-sans`). The font is Inter, self-hosted with `next/font/google` in `src/app/layout.tsx`; change fonts there, not per component. A small reset at the top of `globals.css` sets the common starting point.
+- Component styles live next to the component as a CSS module (`Foo.tsx` + `Foo.module.css`, camelCase class names, `import styles from "./Foo.module.css"`). Styles shared by several components go in one shared module (e.g. `Preview.module.css` for the preview pages). `globals.css` holds only the variables, the reset and the `html`/`body` base; no component rules there.
+- Components and CSS rules must use those variables (`var(--color-accent)`). Never write a raw color (hex, `rgb()`, named colors) or a `font-family` anywhere else, including inline styles. Need a new color? Add a variable there first.
+- Exception: `src/app/layout.tsx` keeps a literal black so the screen is black before the CSS loads, and the generated weather icons use `currentColor`.
+
+## Tests
+- Unit tests (vitest) live next to the code they test: `src/lib/foo.ts` → `src/lib/foo.test.ts`. Shared sample data goes in `src/lib/__fixtures__/`.
+- Run `npm test` (and `npm run typecheck`, `npm run lint`) before calling work done.
+
 ## Environment
 - Node 24.x, the newest Vercel supports (`.nvmrc`; `package.json` `engines.node` = `24.x`). Run `nvm use` first.
 

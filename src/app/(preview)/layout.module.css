@@ -1,0 +1,12 @@
+/* Shared shell: a menu on top, then a portrait 9:16 frame with controls below it. */
+.previewShell {
+  --nav: 48px;
+  --controls: 96px;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-bg);
+  cursor: auto;
+  font-family: var(--font-sans);
+}

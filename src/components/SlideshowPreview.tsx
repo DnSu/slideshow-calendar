@@ -4,12 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { demoEvents } from "@/lib/demoEvents";
 import { demoWeather } from "@/lib/demoWeather";
 import { weatherView } from "@/lib/weatherView";
+import { windowLabel } from "@/lib/windowLabels";
 import { eventPages } from "@/lib/events";
 import { imageUrl } from "@/lib/offline";
 import { activeImages, previewCycle, type Step } from "@/lib/slides";
 import type { Playlist, PlaylistImage } from "@/lib/types";
 import CalendarSlide from "./CalendarSlide";
 import WeatherSlide from "./WeatherSlide";
+import styles from "./Preview.module.css";
+import NothingToShow from "./NothingToShow";
+import { emptyReasons } from "@/lib/emptyState";
+import layerStyles from "./Player.module.css";
 
 type Props = { demo: boolean };
 
@@ -105,9 +110,11 @@ export default function SlideshowPreview({ demo }: Props) {
         : [],
     [cfg, demo, nowMs, playlist],
   );
-  const pageCount = cfg
-    ? eventPages(events, nowMs, cfg.timezone, cfg.calendar).length
-    : 0;
+  const emergency = !!playlist?.emergency;
+  const pageCount =
+    cfg && !emergency
+      ? eventPages(events, nowMs, cfg.timezone, cfg.calendar).length
+      : 0;
   const weather = useMemo(
     () =>
       cfg
@@ -119,6 +126,7 @@ export default function SlideshowPreview({ demo }: Props) {
   );
   const hasWeather =
     !!cfg &&
+    !emergency &&
     (demo || cfg.weather.enabled) &&
     weatherView(weather, nowMs, cfg.timezone) !== null;
   const byId = useMemo(() => new Map(images.map((i) => [i.id, i])), [images]);
@@ -172,17 +180,14 @@ export default function SlideshowPreview({ demo }: Props) {
   let notice: string | null = null;
   if (error) notice = `Could not load /api/playlist: ${error}`;
   else if (!cfg) notice = "Loading…";
-  else if (!step)
-    notice =
-      "Nothing to show: no active images, no upcoming events and no weather. The screen would be black.";
 
   return (
-    <div className="preview-page">
-      <div className="preview-frame">
+    <div className={styles.previewPage}>
+      <div className={styles.previewFrame}>
         {cfg && step && (
           <div
             key={index}
-            className="layer"
+            className={layerStyles.layer}
             style={{ animationDuration: `${cfg.slideshow.transitionMs}ms` }}
           >
             {step.slide.kind === "image" ? (
@@ -212,11 +217,23 @@ export default function SlideshowPreview({ demo }: Props) {
             )}
           </div>
         )}
-        {notice && <div className="preview-notice">{notice}</div>}
+        {cfg && !step && !error && playlist && (
+          // Exactly what the screen shows when it has nothing.
+          <NothingToShow
+            reasons={emptyReasons(playlist.sources, {
+              activeImages: activeIds.size,
+              totalImages: playlist.images.length,
+              hasEvents: pageCount > 0,
+              hasWeather,
+            })}
+            checkMinutes={cfg.refresh.playlistMinutes}
+          />
+        )}
+        {notice && <div className={styles.previewNotice}>{notice}</div>}
       </div>
 
-      <div className="preview-controls">
-        <div className="preview-buttons">
+      <div className={styles.previewControls}>
+        <div className={styles.previewButtons}>
           <button type="button" onClick={prev} disabled={!total}>
             ◀ Prev
           </button>
@@ -236,7 +253,7 @@ export default function SlideshowPreview({ demo }: Props) {
           </button>
           <button
             type="button"
-            className={showAll ? "active" : undefined}
+            className={showAll ? styles.active : undefined}
             aria-pressed={showAll}
             onClick={() => {
               setShowAll((v) => !v);
@@ -248,7 +265,12 @@ export default function SlideshowPreview({ demo }: Props) {
             {showAll ? "All images" : "Active now"}
           </button>
         </div>
-        <div className="preview-info">
+        <div className={styles.previewInfo}>
+          {emergency && !refreshNote && (
+            <strong className={styles.previewEmergency}>
+              Emergency Override active ·{" "}
+            </strong>
+          )}
           {refreshNote ??
             (step && cfg
               ? describe(
@@ -267,17 +289,6 @@ export default function SlideshowPreview({ demo }: Props) {
       </div>
     </div>
   );
-}
-
-function windowText(i: PlaylistImage): string {
-  if (i.yearly) {
-    return i.yearly.from === i.yearly.to
-      ? `every year on ${i.yearly.from}`
-      : `every year ${i.yearly.from} – ${i.yearly.to}`;
-  }
-  if (!i.start && !i.end) return "root, always";
-  if (!i.start) return `until ${i.end}`;
-  return `${i.start} – ${i.end}`;
 }
 
 /** `position` loops 0..total-1 over the preview cycle: images, calendar pages, weather. */
@@ -302,5 +313,5 @@ function describe(
   const shown = activeIds.has(step.slide.id)
     ? `${imageSeconds}s on screen`
     : "not on screen now";
-  return `${n} · ${img ? windowText(img) : "image"} · ${shown}`;
+  return `${n} · ${img ? windowLabel(img) : "image"} · ${shown}`;
 }

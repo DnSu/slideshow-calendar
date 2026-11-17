@@ -54,9 +54,13 @@ export function mergeSettings(
 ): { settings: CoreSettings; problems: string[] } {
   const problems: string[] = [];
   const out = structuredClone(base) as Record<string, Record<string, unknown>>;
-  if (override === null || override === undefined) return { settings: base, problems };
+  if (override === null || override === undefined)
+    return { settings: base, problems };
   if (!isRecord(override)) {
-    return { settings: base, problems: ["config.json must contain a JSON object"] };
+    return {
+      settings: base,
+      problems: ["config.json must contain a JSON object"],
+    };
   }
   for (const [section, sectionSchema] of Object.entries(schema.shape)) {
     const given = override[section];
@@ -80,30 +84,40 @@ export function mergeSettings(
     }
   }
   for (const key of Object.keys(override)) {
-    if (!Object.hasOwn(schema.shape, key) && key !== "timezone") problems.push(`unknown setting "${key}"; ignored`);
+    if (!Object.hasOwn(schema.shape, key) && key !== "timezone")
+      problems.push(`unknown setting "${key}"; ignored`);
   }
   const merged = out as unknown as CoreSettings;
   return { settings: merged, problems };
 }
 
-export type Env = { driveFolderId: string; calendarId: string; timezone: string };
+/** Deployment settings. A missing ID turns that source off (the screen explains why); it isn't an error. */
+export type Env = {
+  driveFolderId: string | null;
+  calendarId: string | null;
+  timezone: string;
+};
 
 /** Reads and validates environment variables. Throws a clear error if one is missing. */
-export function getEnv(source: Record<string, string | undefined> = process.env): Env {
-  const missing = ["DRIVE_FOLDER_ID", "CALENDAR_ID"].filter((k) => !source[k]?.trim());
-  if (missing.length) {
-    throw new Error(
-      `Missing required environment variable(s): ${missing.join(", ")}. See .env.example.`,
-    );
+export function getEnv(
+  source: Record<string, string | undefined> = process.env,
+): Env {
+  for (const k of ["DRIVE_FOLDER_ID", "CALENDAR_ID"]) {
+    if (!source[k]?.trim())
+      console.warn(
+        `[config] ${k} is not set; that source is off. See .env.example.`,
+      );
   }
   let timezone = source.TIMEZONE?.trim() || "UTC";
   if (!isValidTimezone(timezone)) {
-    console.warn(`[config] TIMEZONE "${timezone}" is not a valid IANA timezone; using UTC`);
+    console.warn(
+      `[config] TIMEZONE "${timezone}" is not a valid IANA timezone; using UTC`,
+    );
     timezone = "UTC";
   }
   return {
-    driveFolderId: source.DRIVE_FOLDER_ID!.trim(),
-    calendarId: source.CALENDAR_ID!.trim(),
+    driveFolderId: source.DRIVE_FOLDER_ID?.trim() || null,
+    calendarId: source.CALENDAR_ID?.trim() || null,
     timezone,
   };
 }
@@ -119,23 +133,33 @@ export function parseOverrideText(text: string): unknown {
 }
 
 /** Full settings: defaults + optional Drive override + timezone from env (or override). */
-export function buildSettings(envTimezone: string, override: unknown): Settings {
+export function buildSettings(
+  envTimezone: string,
+  override: unknown,
+): Settings {
   let merged: ReturnType<typeof mergeSettings>;
   try {
     merged = mergeSettings(defaultSettings, override);
   } catch (err) {
     // Belt and braces: a Drive file must never take the screens down.
-    console.warn(`[config] Drive config.json could not be applied; using defaults: ${(err as Error).message}`);
+    console.warn(
+      `[config] Drive config.json could not be applied; using defaults: ${(err as Error).message}`,
+    );
     return { ...defaultSettings, timezone: envTimezone };
   }
   const { settings, problems } = merged;
   for (const p of problems) console.warn(`[config] ${p}`);
   let timezone = envTimezone;
   if (isRecord(override) && override.timezone !== undefined) {
-    if (typeof override.timezone === "string" && isValidTimezone(override.timezone)) {
+    if (
+      typeof override.timezone === "string" &&
+      isValidTimezone(override.timezone)
+    ) {
       timezone = override.timezone;
     } else {
-      console.warn('[config] invalid "timezone" in Drive config.json; using default');
+      console.warn(
+        '[config] invalid "timezone" in Drive config.json; using default',
+      );
     }
   }
   return { ...settings, timezone };
@@ -161,19 +185,26 @@ export function getWeatherLocation(
 ): WeatherLocation | null {
   const latitude = coordinate(source.WEATHER_LATITUDE, 90);
   const longitude = coordinate(source.WEATHER_LONGITUDE, 180);
-  if (latitude !== null && longitude !== null) return { kind: "coords", latitude, longitude };
+  if (latitude !== null && longitude !== null)
+    return { kind: "coords", latitude, longitude };
   if (source.WEATHER_LATITUDE?.trim() || source.WEATHER_LONGITUDE?.trim()) {
-    console.warn("[config] WEATHER_LATITUDE / WEATHER_LONGITUDE must both be valid numbers; ignored");
+    console.warn(
+      "[config] WEATHER_LATITUDE / WEATHER_LONGITUDE must both be valid numbers; ignored",
+    );
   }
   const zip = source.WEATHER_ZIP?.trim();
   if (!zip) return null;
   if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,19}$/.test(zip)) {
-    console.warn("[config] WEATHER_ZIP is not a valid postal code; weather disabled");
+    console.warn(
+      "[config] WEATHER_ZIP is not a valid postal code; weather disabled",
+    );
     return null;
   }
   let country = source.WEATHER_COUNTRY?.trim().toUpperCase() || "US";
   if (!/^[A-Z]{2}$/.test(country)) {
-    console.warn('[config] WEATHER_COUNTRY must be a 2-letter country code; using "US"');
+    console.warn(
+      '[config] WEATHER_COUNTRY must be a 2-letter country code; using "US"',
+    );
     country = "US";
   }
   return { kind: "zip", zip, country };

@@ -5,6 +5,7 @@ import { demoEvents } from "@/lib/demoEvents";
 import { eventPages } from "@/lib/events";
 import type { Playlist } from "@/lib/types";
 import CalendarSlide from "./CalendarSlide";
+import styles from "./Preview.module.css";
 
 type Props = { demo: boolean; pinnedPage: number | null };
 
@@ -87,8 +88,8 @@ export default function CalendarPreview({ demo, pinnedPage }: Props) {
   }
 
   return (
-    <div className="preview-page">
-      <div className="preview-frame">
+    <div className={styles.previewPage}>
+      <div className={styles.previewFrame}>
         {cfg && pageCount > 0 && (
           <CalendarSlide
             events={events}
@@ -98,11 +99,11 @@ export default function CalendarPreview({ demo, pinnedPage }: Props) {
             page={index}
           />
         )}
-        {notice && <div className="preview-notice">{notice}</div>}
+        {notice && <div className={styles.previewNotice}>{notice}</div>}
       </div>
 
-      <div className="preview-controls">
-        <div className="preview-buttons">
+      <div className={styles.previewControls}>
+        <div className={styles.previewButtons}>
           <button type="button" onClick={prev} disabled={!multi}>
             ◀ Prev
           </button>
@@ -117,7 +118,7 @@ export default function CalendarPreview({ demo, pinnedPage }: Props) {
             {paused ? "Play" : "Pause"}
           </button>
         </div>
-        <div className="preview-info">{info}</div>
+        <div className={styles.previewInfo}>{info}</div>
       </div>
     </div>
   );

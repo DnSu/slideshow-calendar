@@ -1,0 +1,106 @@
+/* Shared by the preview pages: 9:16 frame, controls, info line. Colors and fonts come from the variables in src/app/globals.css. */
+
+/* Developer previews (/slideshow, /calendar) */
+.previewNotice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vw;
+  text-align: center;
+  font-size: 3vh;
+  color: var(--ui-text-dim);
+}
+
+.previewPage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.previewFrame {
+  /* Largest 9:16 frame that fits beside the controls. 1% of its height/width: */
+  --vh: calc(
+    min(100vh - var(--nav) - var(--controls) - 44px, (100vw - 32px) * 16 / 9) /
+      100
+  );
+  --vw: calc(var(--vh) * 9 / 16);
+  position: relative;
+  height: calc(100 * var(--vh));
+  width: calc(100 * var(--vw));
+  flex: none;
+  background: var(--color-bg);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--ui-frame-edge),
+    0 8px 32px var(--ui-shadow);
+}
+
+.previewFrame .previewNotice {
+  font-size: calc(2.5 * var(--vh));
+}
+
+.previewControls {
+  /* Fixed height so the buttons stay put however long the info line is. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  height: var(--controls);
+  width: 100%;
+  flex: none;
+  font-size: 14px;
+  color: var(--ui-text);
+}
+
+.previewButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.previewControls button {
+  min-width: 96px; /* same width for Play / Pause so nothing shifts */
+  font: inherit;
+  padding: 8px 16px;
+  border: 1px solid var(--ui-button-border);
+  border-radius: 6px;
+  background: var(--ui-button);
+  color: var(--ui-text-strong);
+  cursor: pointer;
+}
+
+.previewControls button:hover:not(:disabled) {
+  background: var(--ui-button-hover);
+}
+
+.previewEmergency {
+  color: var(--ui-alert);
+}
+
+.previewControls button.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.previewControls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.previewInfo {
+  max-width: min(560px, 100%);
+  max-height: 2.8em;
+  overflow: hidden;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--ui-text-dim);
+  font-variant-numeric: tabular-nums;
+}

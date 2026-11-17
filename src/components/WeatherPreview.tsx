@@ -5,6 +5,7 @@ import { DEMO_WEATHER_VARIANTS, demoWeather } from "@/lib/demoWeather";
 import type { Playlist } from "@/lib/types";
 import { weatherView } from "@/lib/weatherView";
 import WeatherSlide from "./WeatherSlide";
+import styles from "./Preview.module.css";
 
 type Props = { demo: boolean };
 
@@ -21,13 +22,17 @@ export default function WeatherPreview({ demo }: Props) {
 
   const load = useCallback(() => {
     fetch("/api/playlist", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)),
+      )
       .then((data: Playlist) => {
         setPlaylist(data);
         setError(null);
         setNowMs(Date.now());
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e: unknown) =>
+        setError(e instanceof Error ? e.message : String(e)),
+      );
   }, []);
 
   useEffect(() => {
@@ -37,10 +42,24 @@ export default function WeatherPreview({ demo }: Props) {
   }, [load]);
 
   const cfg = playlist?.config;
-  const weather = cfg ? (demo ? demoWeather(nowMs, cfg.timezone, cfg.weather.units, variant) : (playlist.weather ?? null)) : null;
-  const shown = cfg && weather && (demo || cfg.weather.enabled) && weatherView(weather, nowMs, cfg.timezone) !== null;
+  const weather = cfg
+    ? demo
+      ? demoWeather(nowMs, cfg.timezone, cfg.weather.units, variant)
+      : (playlist.weather ?? null)
+    : null;
+  const shown =
+    cfg &&
+    weather &&
+    (demo || cfg.weather.enabled) &&
+    weatherView(weather, nowMs, cfg.timezone) !== null;
 
-  const step = useCallback((n: number) => setVariant((v) => (v + n + DEMO_WEATHER_VARIANTS) % DEMO_WEATHER_VARIANTS), []);
+  const step = useCallback(
+    (n: number) =>
+      setVariant(
+        (v) => (v + n + DEMO_WEATHER_VARIANTS) % DEMO_WEATHER_VARIANTS,
+      ),
+    [],
+  );
   useEffect(() => {
     if (!demo) return;
     const onKey = (e: KeyboardEvent) => {
@@ -55,33 +74,44 @@ export default function WeatherPreview({ demo }: Props) {
   if (error) notice = `Could not load /api/playlist: ${error}`;
   else if (!cfg) notice = "Loading…";
   else if (!shown)
-    notice = "No weather to show. The main screen skips the weather slide. Turn on sample data in the menu to preview the layout.";
+    notice =
+      "No weather to show. The main screen skips the weather slide. Turn on sample data in the menu to preview the layout.";
 
   let info = "—";
   if (cfg) {
     if (shown && weather) {
-      const updated = new Intl.DateTimeFormat("en-US", { timeZone: cfg.timezone, hour: "numeric", minute: "2-digit" }).format(
-        weather.fetchedAt,
-      );
+      const updated = new Intl.DateTimeFormat("en-US", {
+        timeZone: cfg.timezone,
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(weather.fetchedAt);
       info = `Weather · ${cfg.weather.displaySeconds}s on screen · updated ${updated}`;
       if (demo) info += ` · sample ${variant + 1} of ${DEMO_WEATHER_VARIANTS}`;
-    } else if (!cfg.weather.enabled) info = "Weather is turned off (weather.enabled)";
-    else if (playlist.degraded.includes("weather")) info = "Hidden: the forecast could not be loaded";
-    else if (!weather) info = "Hidden: no weather location set (or weather is unavailable)";
+    } else if (!cfg.weather.enabled)
+      info = "Weather is turned off (weather.enabled)";
+    else if (playlist.degraded.includes("weather"))
+      info = "Hidden: the forecast could not be loaded";
+    else if (!weather)
+      info = "Hidden: no weather location set (or weather is unavailable)";
     else info = "Hidden: fewer than 2 forecast days left";
   }
 
   return (
-    <div className="preview-page">
-      <div className="preview-frame">
+    <div className={styles.previewPage}>
+      <div className={styles.previewFrame}>
         {cfg && weather && shown && (
-          <WeatherSlide weather={weather} nowMs={nowMs} timezone={cfg.timezone} settings={cfg.weather} />
+          <WeatherSlide
+            weather={weather}
+            nowMs={nowMs}
+            timezone={cfg.timezone}
+            settings={cfg.weather}
+          />
         )}
-        {notice && <div className="preview-notice">{notice}</div>}
+        {notice && <div className={styles.previewNotice}>{notice}</div>}
       </div>
 
-      <div className="preview-controls">
-        <div className="preview-buttons">
+      <div className={styles.previewControls}>
+        <div className={styles.previewButtons}>
           <button type="button" onClick={() => step(-1)} disabled={!demo}>
             ◀ Prev
           </button>
@@ -92,7 +122,7 @@ export default function WeatherPreview({ demo }: Props) {
             Reload
           </button>
         </div>
-        <div className="preview-info">{info}</div>
+        <div className={styles.previewInfo}>{info}</div>
       </div>
     </div>
   );

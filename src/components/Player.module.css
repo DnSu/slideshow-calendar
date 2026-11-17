@@ -1,0 +1,33 @@
+/* Player layers and cross-fade (also used by the /slideshow preview). Colors and fonts come from the variables in src/app/globals.css. */
+
+.player {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  animation-name: fade-in;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
