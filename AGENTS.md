@@ -1,10 +1,10 @@
 # slideshow-calendar
 
-Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen slideshow from a public Google Drive folder, plus an upcoming-events page from a public Google Calendar. No Google API key. The initial design is in `plans/01-initial-build.md`.
+Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen slideshow from a public Google Drive folder, plus an upcoming-events page from a public Google Calendar. No Google API key. Past plans are in `plans/completed/`.
 
 ## Plans (`plans/`)
-- Name files `NN-short-name.md`, where `NN` is two digits, one higher than the last (`01-initial-build.md`, `02-...`).
-- When a plan is finished, compact it in place: replace it with a short record of what was built, key decisions and why, and anything left open. Remove step lists and alternatives that were dropped.
+- Name files `NN-short-name.md`, where `NN` is two digits, one higher than the last one in `plans/` or `plans/completed/` (next: `03-...`).
+- When a plan is finished, compact it and move it to `plans/completed/`: a terse, agent-only record of what was built, key decisions and why, and anything left open (no step lists, dropped alternatives or prose for humans).
 - **Don't read or search `plans/` unless the user names a plan or asks about past plans.** The code is the source of truth. `.ignore` keeps `plans/` out of ripgrep and Grep results. Read a plan file directly when it's needed.
 
 ## This repo is public (open source on GitHub)
