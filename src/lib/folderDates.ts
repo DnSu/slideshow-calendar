@@ -46,6 +46,22 @@ function yearlyPart(s: string): { first: MonthDay; last: MonthDay } | null {
 
 const isYearly = (s: string) => s.startsWith("0000-");
 
+/** " - ", " – " or " — " (spaces required, so the dashes inside dates don't count). */
+const LABEL_SEP = /\s+[-–—]\s+/;
+const STARTS_WITH_DATE = /^\d{4}-\d{2}/;
+
+/**
+ * Drop an optional " - description" from a folder name, leaving the date part.
+ * A piece after the dash that starts with a date is kept as part of a range,
+ * so "2026-12-01 - 2026-12-31" still means Dec 1 through Dec 31.
+ */
+export function stripLabel(name: string): string {
+  const pieces = name.trim().split(LABEL_SEP);
+  let dates = pieces[0];
+  for (let i = 1; i < pieces.length && STARTS_WITH_DATE.test(pieces[i]); i++) dates += ` ${pieces[i]}`;
+  return dates;
+}
+
 /**
  * Folder names:
  *   YYYY-MM                 shown until the last day of that month
@@ -56,9 +72,10 @@ const isYearly = (s: string) => s.startsWith("0000-");
  *   0000-MM-DD              that day
  *   0000-MM-DD 0000-MM-DD   from the first day through the second; may wrap over New Year
  *   0000-MM 0000-MM         from the first month through the end of the second
+ * Any of these may be followed by " - description", which is ignored (see `stripLabel`).
  */
 export function parseFolderName(name: string): ParsedFolder {
-  const parts = name.trim().split(/\s+/);
+  const parts = stripLabel(name).split(/\s+/);
   if (parts.some(isYearly)) {
     if (!parts.every(isYearly)) return { ok: false, reason: "mixes yearly (0000) and dated parts" };
     if (parts.length > 2) return { ok: false, reason: "unrecognised folder name" };

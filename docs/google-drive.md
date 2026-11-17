@@ -24,6 +24,8 @@ Inside the root folder you can make subfolders (one level only; deeper folders a
 
 Year `0000` means "every year": only the month and day are matched. Both parts of a range must use `0000`; mixing (`0000-06-15 2026-07-05`) is ignored. `0000-02-29` only shows in leap years.
 
+Any folder name can end with ` - description` (for example `2026-12-01 2026-12-31 - Pool closed`). Everything after the first ` - ` (spaces on both sides; `–` and `—` work too) is ignored, unless it starts with a date: `2026-12-01 - 2026-12-31` is read as a range.
+
 Dates are whole days (inclusive) in `TIMEZONE`. Any other folder name is ignored and noted in the server log.
 
 For the people who manage the pictures, [`docs/HOW-TO-USE-THIS-FOLDER.txt`](HOW-TO-USE-THIS-FOLDER.txt) explains these rules in plain language. Copy it into the root of the Drive folder; text files are never shown on screen.

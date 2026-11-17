@@ -27,6 +27,31 @@ describe("parseFolderName", () => {
     });
     expect(parseFolderName("2026-12-05 2026-12-05").ok).toBe(true);
   });
+  it("ignores a trailing \" - description\"", () => {
+    expect(parseFolderName("2026-12-01 2026-12-31 - Pool closed")).toEqual({
+      ok: true,
+      window: { start: "2026-12-01", end: "2026-12-31" },
+    });
+    expect(parseFolderName("2026-12 – Winter party")).toEqual({
+      ok: true,
+      window: { start: null, end: "2026-12-31" },
+    });
+    expect(parseFolderName("0000-12-15 0000-01-05 — Holidays - lobby")).toEqual({
+      ok: true,
+      window: { start: null, end: null, yearly: { from: "12-15", to: "01-05" } },
+    });
+    expect(parseFolderName("2026-12-31 - 2026 NYE")).toEqual({
+      ok: true,
+      window: { start: null, end: "2026-12-31" },
+    });
+  });
+  it("reads a dash between two dates as a range", () => {
+    expect(parseFolderName("2026-12-01 - 2026-12-31")).toEqual({
+      ok: true,
+      window: { start: "2026-12-01", end: "2026-12-31" },
+    });
+    expect(parseFolderName("2026-12-01 - 2026-12-31 - Pool closed").ok).toBe(true);
+  });
   it("rejects malformed names", () => {
     for (const n of [
       "Holiday",
@@ -37,6 +62,8 @@ describe("parseFolderName", () => {
       "2026-12-01 2026-12-31 2027-01-01",
       "2026-1-1",
       "2026-12-01_2026-12-31",
+      "Pool closed - 2026-12-01",
+      "2026-12-01-Pool closed",
       "",
     ]) {
       expect(parseFolderName(n).ok, n).toBe(false);

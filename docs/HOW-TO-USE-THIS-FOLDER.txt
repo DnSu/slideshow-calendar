@@ -26,6 +26,13 @@ Write dates as YEAR-MONTH-DAY with numbers, for example 2026-03-07
 (not 2026-3-7). Put ONE space between two dates. Both dates count:
 the pictures show for the whole first day and the whole last day.
 
+You can add a note after the dates to say what the folder is for:
+put a space, a dash, a space, then anything you like. The note is
+ignored; only the dates count.
+
+  2026-12-01 2026-12-31 - Pool closed
+  0000-12-15 0000-01-05 - Winter holidays
+
 
 3. PICTURES THAT COME BACK EVERY YEAR
 -------------------------------------
