@@ -100,7 +100,7 @@ Weather data: [Open-Meteo.com](https://open-meteo.com) (CC BY 4.0). Icons: [Mete
 
 Node 24.x (the newest Vercel supports) is pinned via `engines` in `package.json`. The Vercel Hobby plan is for non-commercial use only; business signage needs Pro.
 
-Updates reach screens within about 70 to 80 minutes (60 minutes server cache plus the screen's 10 minute poll). Date windows are checked on the screen every minute, so they never wait for a refresh. A file replaced under the same name is picked up the same way: the image URL includes a version taken from Drive's "last modified" time, so screens and the CDN fetch the new picture instead of their saved copy.
+Updates reach screens within about 70 to 80 minutes (60 minutes server cache plus the screen's 10 minute poll). To push a change out sooner, press **Refresh** on `/slideshow`: the server re-reads Google immediately and screens pick it up within about 10 minutes. Date windows are checked on the screen every minute, so they never wait for a refresh. A file replaced under the same name is picked up the same way: the image URL includes a version taken from Drive's "last modified" time, so screens and the CDN fetch the new picture instead of their saved copy.
 
 **New deploys.** Every playlist response carries a release ID, which Vercel provides automatically as `VERCEL_DEPLOYMENT_ID` (keep "Automatically expose System Environment Variables" on, the default). When an online screen sees a different ID from the one its page was loaded with, it reloads, so screens pick up a new deploy within about one playlist check (~10 minutes). It reloads at most once per new release (the 6 hour reload below is the fallback if that doesn't take). Locally the ID is `dev` and no auto-reload happens.
 
@@ -131,6 +131,8 @@ The signage screen runs at `/`. Three preview pages share a menu at the top for 
 **`/slideshow`** shows the same images, calendar pages, fit and weather as the screen, in a simpler loop: every active image once (in playlist order), then each calendar page once (if there are events), then the weather (if there is a forecast), then back to the first image. This is shorter than the real screen's order, where the calendar and weather come after every `showAfterImages` images.
 
 - **It never advances on its own.** Use **◀ Prev** / **Next ▶** (or the ← / → keys); Prev wraps from the first slide to the last, and Next from the last to the first. **Restart** goes back to slide 1.
+- **Refresh** makes the server read Drive, the calendar and the weather again right away, instead of waiting for its hourly refresh, then shows the new copy. Use it after adding, replacing or removing pictures. Screens get the fresh copy at their next playlist check (within `refresh.playlistMinutes`, 10 by default). The server accepts it at most every 30 seconds.
+- **Active now / All images** switches what the loop includes. **Active now** (the default) shows only the images on screen today. **All images** adds every-year folders outside their dates and folders whose dates haven't started yet, so you can check upcoming pictures; the line below the buttons marks those as "not on screen now". Folders that have ended are never included.
 - The line between the buttons shows the position ("Slide 2 of 6", counting images, calendar pages and weather), the image's date window (or the calendar page, or weather), and how long it stays up on the real screen.
 
 **`/calendar`** shows only the calendar, drawn the way the screen draws it.

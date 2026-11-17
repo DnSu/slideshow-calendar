@@ -1,4 +1,4 @@
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { fetchEvents } from "./calendar";
 import type { Settings } from "./config";
 import { buildSettings, getEnv, getWeatherLocation, parseOverrideText } from "./config";
@@ -22,9 +22,13 @@ type DriveSnapshot = {
  * runs, and a failed refresh leaves the old copy in place. `remote` shares the cache across
  * server instances. Arguments are part of the cache key; they never reach the browser.
  */
+/** Cache tags on the Google reads; /api/refresh revalidates them all. */
+export const SOURCE_TAGS = { drive: "drive", calendar: "calendar", weather: "weather" } as const;
+
 async function loadDrive(folderId: string, timezone: string): Promise<DriveSnapshot> {
   "use cache: remote";
   cacheLife("source");
+  cacheTag(SOURCE_TAGS.drive);
 
   const rootListing = await listFolder(folderId);
   if (!rootListing.recognized) {
@@ -70,12 +74,14 @@ export async function readOverride(
 async function loadCalendar(calendarId: string, fetchDays: number, timezone: string) {
   "use cache: remote";
   cacheLife("source");
+  cacheTag(SOURCE_TAGS.calendar);
   return { events: await fetchEvents(calendarId, fetchDays, timezone), fetchedAt: Date.now() };
 }
 
 async function loadWeather(latitude: number, longitude: number, timezone: string, units: WeatherUnits) {
   "use cache: remote";
   cacheLife("source");
+  cacheTag(SOURCE_TAGS.weather);
   return fetchForecast(latitude, longitude, timezone, units);
 }
 

@@ -24,6 +24,11 @@ export default function SlideshowPreview({ demo }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [nowMs] = useState(() => Date.now());
   const [index, setIndex] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  // Off: only images on screen right now. On: also every-year images outside their dates and
+  // images whose dates haven't started (the playlist already leaves out ended folders).
+  const [showAll, setShowAll] = useState(false);
+  const [refreshNote, setRefreshNote] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/playlist", { cache: "no-store" })
@@ -36,11 +41,60 @@ export default function SlideshowPreview({ demo }: Props) {
       );
   }, []);
 
+  // Refresh: have the server re-read Drive now, then load the new playlist. The query string
+  // skips the CDN's short-lived copy of /api/playlist.
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    setRefreshNote(null);
+    try {
+      const r = await fetch("/api/refresh", { method: "POST" });
+      if (r.status === 429) {
+        const { retryAfterSeconds } = (await r.json()) as {
+          retryAfterSeconds: number;
+        };
+        setRefreshNote(`Just refreshed; try again in ${retryAfterSeconds}s`);
+        return;
+      }
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const p = await fetch(`/api/playlist?fresh=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!p.ok) throw new Error(`HTTP ${p.status}`);
+      const data = (await p.json()) as Playlist;
+      setPlaylist(data);
+      setError(null);
+      setRefreshNote(
+        data.degraded.includes("drive")
+          ? "Couldn't reach Drive; showing the last saved images"
+          : `Refreshed from Drive, calendar and weather at ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`,
+      );
+    } catch (e) {
+      setRefreshNote(
+        `Refresh failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   const cfg = playlist?.config;
+  const activeIds = useMemo(
+    () =>
+      new Set(
+        playlist && cfg
+          ? activeImages(playlist.images, nowMs, cfg.timezone).map((i) => i.id)
+          : [],
+      ),
+    [playlist, cfg, nowMs],
+  );
   const images = useMemo(
     () =>
-      playlist && cfg ? activeImages(playlist.images, nowMs, cfg.timezone) : [],
-    [playlist, cfg, nowMs],
+      playlist
+        ? showAll
+          ? playlist.images
+          : playlist.images.filter((i) => activeIds.has(i.id))
+        : [],
+    [playlist, showAll, activeIds],
   );
   const events = useMemo(
     () =>
@@ -64,12 +118,19 @@ export default function SlideshowPreview({ demo }: Props) {
     [cfg, demo, nowMs, playlist],
   );
   const hasWeather =
-    !!cfg && (demo || cfg.weather.enabled) && weatherView(weather, nowMs, cfg.timezone) !== null;
+    !!cfg &&
+    (demo || cfg.weather.enabled) &&
+    weatherView(weather, nowMs, cfg.timezone) !== null;
   const byId = useMemo(() => new Map(images.map((i) => [i.id, i])), [images]);
 
   // Every image once, then each calendar page, then weather, then round again.
   const cycle = useMemo(
-    () => previewCycle(images.map((i) => i.id), pageCount, hasWeather),
+    () =>
+      previewCycle(
+        images.map((i) => i.id),
+        pageCount,
+        hasWeather,
+      ),
     [images, pageCount, hasWeather],
   );
   const total = cycle.length;
@@ -77,9 +138,18 @@ export default function SlideshowPreview({ demo }: Props) {
   const step = cycle[position];
   const following = total ? cycle[(position + 1) % total] : undefined;
 
-  const next = useCallback(() => setIndex((i) => i + 1), []);
-  const prev = useCallback(() => setIndex((i) => (total ? ((i % total) - 1 + total) % total : 0)), [total]);
-  const restart = useCallback(() => setIndex(0), []);
+  const next = useCallback(() => {
+    setRefreshNote(null);
+    setIndex((i) => i + 1);
+  }, []);
+  const prev = useCallback(() => {
+    setRefreshNote(null);
+    setIndex((i) => (total ? ((i % total) - 1 + total) % total : 0));
+  }, [total]);
+  const restart = useCallback(() => {
+    setRefreshNote(null);
+    setIndex(0);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -156,20 +226,43 @@ export default function SlideshowPreview({ demo }: Props) {
           <button type="button" onClick={restart} disabled={position === 0}>
             Restart
           </button>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={refreshing}
+            title="Re-read Drive, the calendar and the weather now; screens get it at their next check (within 10 minutes)"
+          >
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className={showAll ? "active" : undefined}
+            aria-pressed={showAll}
+            onClick={() => {
+              setShowAll((v) => !v);
+              setIndex(0);
+              setRefreshNote(null);
+            }}
+            title="Also show every-year images outside their dates and images whose dates haven't started"
+          >
+            {showAll ? "All images" : "Active now"}
+          </button>
         </div>
         <div className="preview-info">
-          {step && cfg
-            ? describe(
-                step,
-                position,
-                total,
-                byId,
-                pageCount,
-                cfg.slideshow.imageSeconds,
-                cfg.calendar.displaySeconds,
-                cfg.weather.displaySeconds,
-              )
-            : "—"}
+          {refreshNote ??
+            (step && cfg
+              ? describe(
+                  step,
+                  position,
+                  total,
+                  byId,
+                  activeIds,
+                  pageCount,
+                  cfg.slideshow.imageSeconds,
+                  cfg.calendar.displaySeconds,
+                  cfg.weather.displaySeconds,
+                )
+              : "—")}
         </div>
       </div>
     </div>
@@ -193,16 +286,21 @@ function describe(
   position: number,
   total: number,
   byId: Map<string, PlaylistImage>,
+  activeIds: Set<string>,
   pageCount: number,
   imageSeconds: number,
   calendarSeconds: number,
   weatherSeconds: number,
 ): string {
   const n = `Slide ${position + 1} of ${total}`;
-  if (step.slide.kind === "weather") return `${n} · Weather · ${weatherSeconds}s on screen`;
+  if (step.slide.kind === "weather")
+    return `${n} · Weather · ${weatherSeconds}s on screen`;
   if (step.slide.kind === "calendar") {
     return `${n} · Calendar page ${step.page + 1} of ${pageCount} · ${calendarSeconds}s on screen`;
   }
   const img = byId.get(step.slide.id);
-  return `${n} · ${img ? windowText(img) : "image"} · ${imageSeconds}s on screen`;
+  const shown = activeIds.has(step.slide.id)
+    ? `${imageSeconds}s on screen`
+    : "not on screen now";
+  return `${n} · ${img ? windowText(img) : "image"} · ${shown}`;
 }

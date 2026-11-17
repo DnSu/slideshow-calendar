@@ -310,6 +310,11 @@ body {
   background: #3a3a42;
 }
 
+.preview-controls button.active {
+  border-color: #ffd166;
+  color: #ffd166;
+}
+
 .preview-controls button:disabled {
   opacity: 0.4;
   cursor: default;
