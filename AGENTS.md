@@ -25,6 +25,10 @@ Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen sli
 - Unit tests (vitest) live next to the code they test: `src/lib/foo.ts` → `src/lib/foo.test.ts`. Shared sample data goes in `src/lib/__fixtures__/`.
 - Run `npm test` (and `npm run typecheck`, `npm run lint`) before calling work done.
 
+## Docs
+- `README.md` is a short overview with a table of contents. Detailed guides live in `docs/*.md` (setup, google-drive, google-calendar, weather, settings, deploy, offline, previews, architecture). Put new detail in the matching guide and link it from the README's table, rather than growing the README.
+- `docs/HOW-TO-USE-THIS-FOLDER.txt` and `docs/config.json` are copied into the Drive folder by non-technical users; keep them plain and in sync with behavior.
+
 ## Environment
 - Node 24.x, the newest Vercel supports (`.nvmrc`; `package.json` `engines.node` = `24.x`). Run `nvm use` first.
 
