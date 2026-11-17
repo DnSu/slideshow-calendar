@@ -102,20 +102,22 @@ export default function CalendarPreview({ demo, pinnedPage }: Props) {
       </div>
 
       <div className="preview-controls">
-        <button type="button" onClick={prev} disabled={!multi}>
-          ◀ Prev
-        </button>
+        <div className="preview-buttons">
+          <button type="button" onClick={prev} disabled={!multi}>
+            ◀ Prev
+          </button>
+          <button type="button" onClick={next} disabled={!multi}>
+            Next ▶
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaused((p) => !p)}
+            disabled={!multi}
+          >
+            {paused ? "Play" : "Pause"}
+          </button>
+        </div>
         <div className="preview-info">{info}</div>
-        <button type="button" onClick={next} disabled={!multi}>
-          Next ▶
-        </button>
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          disabled={!multi}
-        >
-          {paused ? "Play" : "Pause"}
-        </button>
       </div>
     </div>
   );

@@ -129,9 +129,17 @@ export default function SlideshowPreview({ demo }: Props) {
       </div>
 
       <div className="preview-controls">
-        <button type="button" onClick={prev} disabled={index === 0}>
-          ◀ Prev
-        </button>
+        <div className="preview-buttons">
+          <button type="button" onClick={prev} disabled={index === 0}>
+            ◀ Prev
+          </button>
+          <button type="button" onClick={next} disabled={!following}>
+            Next ▶
+          </button>
+          <button type="button" onClick={restart} disabled={index === 0}>
+            Restart
+          </button>
+        </div>
         <div className="preview-info">
           {step && cfg
             ? describe(
@@ -145,12 +153,6 @@ export default function SlideshowPreview({ demo }: Props) {
               )
             : "—"}
         </div>
-        <button type="button" onClick={next} disabled={!following}>
-          Next ▶
-        </button>
-        <button type="button" onClick={restart} disabled={index === 0}>
-          Restart
-        </button>
       </div>
     </div>
   );
