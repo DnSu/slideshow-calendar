@@ -17,5 +17,11 @@
   },
   "offline": {
     "showIndicator": true
+  },
+  "weather": {
+    "enabled": true,
+    "units": "fahrenheit",
+    "displaySeconds": 15,
+    "title": "Weather"
   }
 }

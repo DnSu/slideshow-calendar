@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
       revalidate: defaults.refresh.sourceMinutes * 60,
       expire: 30 * 24 * 3600,
     },
+    // Place lookups (ZIP to coordinates) never change; refreshed monthly.
+    location: {
+      stale: 3600,
+      revalidate: 30 * 24 * 3600,
+      expire: 365 * 24 * 3600,
+    },
   },
   async headers() {
     return [

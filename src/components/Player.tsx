@@ -2,15 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import { mergePlaylist } from "@/lib/merge";
-import { imageUrl, preloadImage, pruneImages, setupOffline, warmImages } from "@/lib/offline";
+import {
+  imageUrl,
+  preloadImage,
+  pruneImages,
+  setupOffline,
+  warmImages,
+} from "@/lib/offline";
 import { eventPages } from "@/lib/events";
-import { activeImages, initialSeqState, nextSlide, slideDurationMs, trustedNow, type Slide } from "@/lib/slides";
+import {
+  activeImages,
+  initialSeqState,
+  nextSlide,
+  slideDurationMs,
+  trustedNow,
+  type Slide,
+} from "@/lib/slides";
 import type { Playlist } from "@/lib/types";
+import { weatherView } from "@/lib/weatherView";
 import CalendarSlide from "./CalendarSlide";
+import WeatherSlide from "./WeatherSlide";
 import OfflineDot from "./OfflineDot";
 
 /** `page` is the calendar page shown on this layer (images: 0). */
-type Layer = { key: number; slide: Slide; page: number };
+type Layer = { key: number; slide: Slide; page: number; src: string };
 
 const MINUTE = 60_000;
 
@@ -69,7 +84,12 @@ export default function Player() {
       const pl = playlistRef.current;
       setNowMs(trustedNow(Date.now(), pl?.serverTime ?? 0));
       const hours = pl?.config.refresh.pageReloadHours ?? 6;
-      if (pl && !failedRef.current && navigator.onLine && performance.now() - started >= hours * 3600_000) {
+      if (
+        pl &&
+        !failedRef.current &&
+        navigator.onLine &&
+        performance.now() - started >= hours * 3600_000
+      ) {
         location.reload();
       }
     };
@@ -82,13 +102,14 @@ export default function Player() {
   }, []);
 
   // Keep images saved for offline use; drop the ones that left the playlist.
-  const imageKey = playlist?.images.map((i) => i.id).join(",") ?? null;
+  const imageKey =
+    playlist?.images.map((i) => imageUrl(i.id, i.version)).join("\n") ?? null;
   useEffect(() => {
     if (imageKey === null) return;
-    const ids = imageKey ? imageKey.split(",") : [];
+    const urls = imageKey ? imageKey.split("\n") : [];
     let cancelled = false;
-    pruneImages(ids);
-    void warmImages(ids, () => cancelled);
+    pruneImages(urls);
+    void warmImages(urls, () => cancelled);
     return () => {
       cancelled = true;
     };
@@ -112,6 +133,7 @@ export default function Player() {
       let layerKey = 0;
       let current: Slide | null = null;
       let currentPage = 0;
+      let currentSrc = "";
       let calendarTurns = 0; // advances one calendar page per calendar turn
       while (!cancelled) {
         const pl = playlistRef.current;
@@ -121,24 +143,35 @@ export default function Player() {
         }
         const now = trustedNow(Date.now(), pl.serverTime);
         const tz = pl.config.timezone;
-        const ids = activeImages(pl.images, now, tz).map((i) => i.id);
-        const pageCount = eventPages(pl.events, now, tz, pl.config.calendar).length;
+        const active = activeImages(pl.images, now, tz);
+        const ids = active.map((i) => i.id);
+        const versions = new Map(active.map((i) => [i.id, i.version]));
+        const src = (id: string) => imageUrl(id, versions.get(id));
+        const pageCount = eventPages(
+          pl.events,
+          now,
+          tz,
+          pl.config.calendar,
+        ).length;
         const hasEvents = pageCount > 0;
+        const hasWeather =
+          pl.config.weather.enabled && weatherView(pl.weather, now, tz) !== null;
         const after = pl.config.calendar.showAfterImages;
         setNowMs(now);
 
         let slide: Slide | null = null;
         for (let tries = 0; tries <= ids.length; tries++) {
-          const r = nextSlide(seq, ids, hasEvents, after);
+          const r = nextSlide(seq, ids, hasEvents, after, hasWeather);
           seq = r.state;
           slide = r.slide;
           if (slide?.kind !== "image") break;
-          if (await preloadImage(imageUrl(slide.id))) break;
+          if (await preloadImage(src(slide.id))) break;
           if (cancelled) return;
           slide = null; // failed to load: skip it
         }
         if (cancelled) return;
         if (!slide && hasEvents) slide = { kind: "calendar" };
+        else if (!slide && hasWeather) slide = { kind: "weather" };
 
         if (!slide) {
           current = null;
@@ -147,17 +180,27 @@ export default function Player() {
           continue;
         }
 
-        const page = slide.kind === "calendar" ? calendarTurns++ % pageCount : 0;
+        const page =
+          slide.kind === "calendar" ? calendarTurns++ % pageCount : 0;
         const same =
           current !== null &&
           current.kind === slide.kind &&
           (slide.kind === "calendar"
             ? currentPage === page
-            : current.kind === "image" && current.id === slide.id);
+            : slide.kind === "weather" ||
+              (current.kind === "image" &&
+                current.id === slide.id &&
+                currentSrc === src(slide.id)));
         if (!same) {
           current = slide;
           currentPage = page;
-          const layer: Layer = { key: ++layerKey, slide, page };
+          currentSrc = slide.kind === "image" ? src(slide.id) : "";
+          const layer: Layer = {
+            key: ++layerKey,
+            slide,
+            page,
+            src: currentSrc,
+          };
           setLayers((prev) => [...prev.slice(-1), layer]);
           const fade = pl.config.slideshow.transitionMs;
           const t = setTimeout(() => {
@@ -168,8 +211,8 @@ export default function Player() {
         }
 
         // Preload the image that will follow.
-        const peek = nextSlide(seq, ids, hasEvents, after).slide;
-        if (peek?.kind === "image") void preloadImage(imageUrl(peek.id));
+        const peek = nextSlide(seq, ids, hasEvents, after, hasWeather).slide;
+        if (peek?.kind === "image") void preloadImage(src(peek.id));
 
         await sleep(slideDurationMs(slide, pl.config));
       }
@@ -188,15 +231,27 @@ export default function Player() {
         <div
           key={l.key}
           className="layer"
-          style={{ animationDuration: `${cfg?.slideshow.transitionMs ?? 1000}ms` }}
+          style={{
+            animationDuration: `${cfg?.slideshow.transitionMs ?? 1000}ms`,
+          }}
         >
           {l.slide.kind === "image" ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={imageUrl(l.slide.id)}
+              src={l.src}
               alt=""
               style={{ objectFit: cfg?.slideshow.imageFit ?? "cover" }}
             />
+          ) : l.slide.kind === "weather" ? (
+            cfg &&
+            playlist?.weather && (
+              <WeatherSlide
+                weather={playlist.weather}
+                nowMs={nowMs}
+                timezone={cfg.timezone}
+                settings={cfg.weather}
+              />
+            )
           ) : (
             cfg &&
             playlist && (

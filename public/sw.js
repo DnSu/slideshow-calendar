@@ -38,13 +38,20 @@ async function networkFirst(request, cacheName, cacheKey, markCached) {
   }
 }
 
-async function cacheFirst(request, cacheName, accept) {
+async function cacheFirst(request, cacheName, accept, fallbackIgnoringSearch) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(request);
   if (hit) return hit;
-  const res = await fetch(request);
-  if (res.ok && accept(res)) await cache.put(request, res.clone());
-  return res;
+  try {
+    const res = await fetch(request);
+    if (res.ok && accept(res)) await cache.put(request, res.clone());
+    return res;
+  } catch (err) {
+    // Offline and this version isn't saved yet: show the older saved version of the same image.
+    const old = fallbackIgnoringSearch && (await cache.match(request, { ignoreSearch: true }));
+    if (old) return old;
+    throw err;
+  }
 }
 
 self.addEventListener("fetch", (event) => {
@@ -59,7 +66,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirst(req, DATA, "/api/playlist", true));
   } else if (url.pathname.startsWith("/api/image/")) {
     event.respondWith(
-      cacheFirst(req, IMAGES, (r) => (r.headers.get("content-type") || "").startsWith("image/")),
+      cacheFirst(req, IMAGES, (r) => (r.headers.get("content-type") || "").startsWith("image/"), true),
     );
   } else if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(req, SHELL, () => true));
@@ -89,10 +96,15 @@ self.addEventListener("message", (event) => {
   } else if (data.type === "prune" && Array.isArray(data.urls)) {
     event.waitUntil(
       (async () => {
-        const wanted = new Set(data.urls.map((u) => new URL(u, self.location.origin).pathname));
+        // Compare path and query, so an old version (?v=...) of a still-wanted image is deleted too.
+        const key = (u) => {
+          const url = new URL(u, self.location.origin);
+          return url.pathname + url.search;
+        };
+        const wanted = new Set(data.urls.map(key));
         const cache = await caches.open(IMAGES);
         for (const req of await cache.keys()) {
-          if (!wanted.has(new URL(req.url).pathname)) await cache.delete(req);
+          if (!wanted.has(key(req.url))) await cache.delete(req);
         }
       })(),
     );

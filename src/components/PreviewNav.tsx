@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 const TABS = [
   { href: "/slideshow", label: "Slideshow" },
   { href: "/calendar", label: "Calendar" },
+  { href: "/weather", label: "Weather" },
 ];
 
 /** Menu shared by the developer previews. Keeps the `?demo` choice when switching. */
@@ -32,7 +33,7 @@ export default function PreviewNav() {
         className={`preview-nav-toggle${demo ? " active" : ""}`}
         aria-pressed={demo}
       >
-        Sample events: {demo ? "on" : "off"}
+        Sample data: {demo ? "on" : "off"}
       </Link>
       <Link
         href="/"

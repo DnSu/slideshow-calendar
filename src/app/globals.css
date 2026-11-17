@@ -324,3 +324,138 @@ body {
   color: #bbb;
   font-variant-numeric: tabular-nums;
 }
+
+/* Weather slide: same screen-unit sizing as the calendar (--vh/--vw), black with soft gray icons.
+   --weather-bg is what overlapping icon shapes are filled with; it must match the background. */
+.weather {
+  --weather-bg: #000;
+  box-sizing: border-box;
+  height: 100%;
+  padding: calc(4 * var(--vh)) calc(6 * var(--vw)) calc(3 * var(--vh));
+  display: flex;
+  flex-direction: column;
+  background: var(--weather-bg);
+  color: #fff;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-header h1 {
+  margin: 0;
+  font-size: calc(4.6 * var(--vh));
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.weather-date {
+  margin-top: calc(0.8 * var(--vh));
+  font-size: calc(3 * var(--vh));
+  font-weight: 600;
+  color: #ffd166;
+}
+
+.weather-today {
+  flex: 1;
+  min-height: 0;
+  padding: calc(3 * var(--vh)) calc(3 * var(--vw)) calc(4 * var(--vh));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.weather-today-icon {
+  /* The drawings have empty margins inside their square; trim them so the icon sits close to the number. */
+  width: calc(22 * var(--vh));
+  height: calc(22 * var(--vh));
+  margin: calc(-3.5 * var(--vh)) 0 calc(-2 * var(--vh));
+  color: #fff;
+}
+
+.weather-temp {
+  font-size: calc(11 * var(--vh));
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: calc(4.5 * var(--vh));
+}
+
+.weather-condition {
+  font-size: calc(3.6 * var(--vh));
+  font-weight: 600;
+  margin-bottom: calc(4 * var(--vh));
+}
+
+/* Two quiet lines of small, soft gray, widely spaced. */
+.weather-detail {
+  font-size: calc(2.2 * var(--vh));
+  letter-spacing: 0.08em;
+  color: #8f8f8f;
+}
+
+.weather-detail + .weather-detail {
+  margin-top: calc(1.6 * var(--vh));
+}
+
+.weather-detail-row {
+  display: flex;
+  justify-content: center;
+  gap: calc(4 * var(--vw));
+}
+
+.weather-days {
+  flex: 0 0 calc(21 * var(--vh));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-days li {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 2fr;
+  align-items: center;
+  border-top: calc(0.2 * var(--vh)) solid #262626;
+  font-size: calc(3 * var(--vh));
+}
+
+.weather-day-name {
+  font-weight: 700;
+  color: #ffd166;
+}
+
+.weather-day-icon {
+  width: calc(7.5 * var(--vh));
+  height: calc(7.5 * var(--vh));
+  margin: calc(-1 * var(--vh)) 0;
+  color: #d4d4d4;
+}
+
+.weather-day-rain {
+  color: #9fd3ff;
+  text-align: right;
+  padding-right: calc(4 * var(--vw));
+}
+
+.weather-day-temps {
+  text-align: right;
+  font-weight: 700;
+}
+
+.weather-day-low {
+  font-weight: 400;
+  color: #aaa;
+}
+
+.weather-footer {
+  flex: none;
+  margin-top: calc(2 * var(--vh));
+  font-size: calc(1.45 * var(--vh));
+  color: #777;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -85,6 +85,18 @@ built-in settings, which are the same as the values below.
   pageReloadHours    how often screens fully restart the page (6)
   showIndicator      true shows a small dot when a screen is offline
 
+The weather slide has its own "weather" section in config.json:
+
+  Setting            What it does
+  -----------------  ------------------------------------------------
+  enabled            false hides the weather slide (true)
+  units              "fahrenheit" or "celsius"
+  displaySeconds     seconds the weather slide stays on screen (15)
+  title              heading on the weather slide ("Weather")
+
+The weather slide shows right after the calendar. It needs the
+screen's location to be set up by whoever manages the website.
+
 To change a setting, edit the number or text and save. Keep the
 quotes, commas and brackets exactly as they are. You can delete
 lines you don't want to change (keep the commas correct), and you

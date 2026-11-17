@@ -23,6 +23,12 @@ const schema = z.object({
     pageReloadHours: z.number().min(1).max(168),
   }),
   offline: z.object({ showIndicator: z.boolean() }),
+  weather: z.object({
+    enabled: z.boolean(),
+    units: z.enum(["fahrenheit", "celsius"]),
+    displaySeconds: z.number().min(5).max(3600),
+    title: z.string().min(1).max(80),
+  }),
 });
 
 export type CoreSettings = z.infer<typeof schema>;
@@ -133,4 +139,42 @@ export function buildSettings(envTimezone: string, override: unknown): Settings 
     }
   }
   return { ...settings, timezone };
+}
+
+/** Where the weather is for. Deployment data: read from env only, never sent to the browser. */
+export type WeatherLocation =
+  | { kind: "coords"; latitude: number; longitude: number }
+  | { kind: "zip"; zip: string; country: string };
+
+function coordinate(raw: string | undefined, limit: number): number | null {
+  if (!raw?.trim()) return null;
+  const n = Number(raw.trim());
+  return Number.isFinite(n) && Math.abs(n) <= limit ? n : null;
+}
+
+/**
+ * Weather location from the environment. Precedence: WEATHER_LATITUDE + WEATHER_LONGITUDE
+ * (both set and valid), then WEATHER_ZIP (+ WEATHER_COUNTRY, default US), else null (no weather).
+ */
+export function getWeatherLocation(
+  source: Record<string, string | undefined> = process.env,
+): WeatherLocation | null {
+  const latitude = coordinate(source.WEATHER_LATITUDE, 90);
+  const longitude = coordinate(source.WEATHER_LONGITUDE, 180);
+  if (latitude !== null && longitude !== null) return { kind: "coords", latitude, longitude };
+  if (source.WEATHER_LATITUDE?.trim() || source.WEATHER_LONGITUDE?.trim()) {
+    console.warn("[config] WEATHER_LATITUDE / WEATHER_LONGITUDE must both be valid numbers; ignored");
+  }
+  const zip = source.WEATHER_ZIP?.trim();
+  if (!zip) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,19}$/.test(zip)) {
+    console.warn("[config] WEATHER_ZIP is not a valid postal code; weather disabled");
+    return null;
+  }
+  let country = source.WEATHER_COUNTRY?.trim().toUpperCase() || "US";
+  if (!/^[A-Z]{2}$/.test(country)) {
+    console.warn('[config] WEATHER_COUNTRY must be a 2-letter country code; using "US"');
+    country = "US";
+  }
+  return { kind: "zip", zip, country };
 }

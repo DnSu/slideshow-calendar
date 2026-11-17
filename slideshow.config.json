@@ -8,5 +8,6 @@
     "title": "Upcoming Events"
   },
   "refresh": { "sourceMinutes": 60, "playlistMinutes": 10, "pageReloadHours": 6 },
-  "offline": { "showIndicator": true }
+  "offline": { "showIndicator": true },
+  "weather": { "enabled": true, "units": "fahrenheit", "displaySeconds": 15, "title": "Weather" }
 }

@@ -9,7 +9,27 @@
  * are likewise unverified against live files.
  */
 
-export type DriveEntry = { id: string; name: string; mime: string | null; isFolder: boolean };
+export type DriveEntry = {
+  id: string;
+  name: string;
+  mime: string | null;
+  isFolder: boolean;
+  /** Drive's "last modified" text as shown on the page ("7:29 pm", "Nov 10"). Changes when a file is replaced. */
+  modified?: string;
+};
+
+/**
+ * Short, URL-safe token that changes when a file's "last modified" text changes, so a file
+ * replaced under the same name (same Drive ID) gets a new image URL and isn't served from cache.
+ */
+export function fileVersion(modified: string): string {
+  let h = 0x811c9dc5; // FNV-1a
+  for (let i = 0; i < modified.length; i++) {
+    h ^= modified.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}
 
 export type DriveListing = {
   entries: DriveEntry[];
@@ -71,7 +91,9 @@ export function parseFolderListing(html: string): DriveListing {
     const mimeMatch = /\/type\/([A-Za-z0-9.+\-]+\/[A-Za-z0-9.+\-]+)/.exec(block);
     const mime = mimeMatch ? mimeMatch[1] : null;
     const isFolder = /\/drive\/folders\//.test(block) || mime === "application/vnd.google-apps.folder";
-    if (name) entries.push({ id: s.id, name, mime, isFolder });
+    const mod = /class="flip-entry-last-modified"[^>]*>\s*<div[^>]*>([^<]*)</.exec(block);
+    const modified = mod ? decodeEntities(mod[1]).trim() : "";
+    if (name) entries.push({ id: s.id, name, mime, isFolder, ...(modified ? { modified } : {}) });
   });
   if (!recognized) console.warn("[drive] folder page not recognised (layout changed, or not public?)");
   return { entries, recognized };

@@ -1,10 +1,12 @@
 import { cacheLife } from "next/cache";
 import { fetchEvents } from "./calendar";
-import { buildSettings, getEnv, parseOverrideText } from "./config";
+import type { Settings } from "./config";
+import { buildSettings, getEnv, getWeatherLocation, parseOverrideText } from "./config";
 import { addDays, dayInTz } from "./dates";
-import { downloadText, isImageEntry, listFolder, type DriveEntry } from "./drive";
+import { downloadText, isImageEntry, listFolder, type DriveEntry, fileVersion } from "./drive";
 import { parseFolderName, type DateWindow } from "./folderDates";
-import type { Playlist, PlaylistEvent, PlaylistImage } from "./types";
+import type { Playlist, PlaylistEvent, PlaylistImage, PlaylistWeather, WeatherUnits } from "./types";
+import { fetchForecast, fetchGeocode } from "./weather";
 
 type DriveSnapshot = {
   root: DriveEntry[];
@@ -70,6 +72,19 @@ async function loadCalendar(calendarId: string, fetchDays: number, timezone: str
   return { events: await fetchEvents(calendarId, fetchDays, timezone), fetchedAt: Date.now() };
 }
 
+async function loadWeather(latitude: number, longitude: number, timezone: string, units: WeatherUnits) {
+  "use cache: remote";
+  cacheLife("source");
+  return fetchForecast(latitude, longitude, timezone, units);
+}
+
+/** ZIP to coordinates. They never change, so this is cached for weeks (profile "location"). */
+async function loadLocation(zip: string, country: string) {
+  "use cache: remote";
+  cacheLife("location");
+  return fetchGeocode(zip, country);
+}
+
 // Per-instance safety net if the shared cache has nothing (e.g. right after a deploy).
 const lastGood = new Map<string, unknown>();
 async function resilient<T>(key: string, load: () => Promise<T>): Promise<T | null> {
@@ -97,6 +112,7 @@ export function assembleImages(snapshot: Pick<DriveSnapshot, "root" | "folders">
         start: w.start,
         end: w.end,
         ...(w.yearly ? { yearly: w.yearly } : {}),
+        ...(e.modified ? { version: fileVersion(e.modified) } : {}),
       });
     }
   };
@@ -115,6 +131,32 @@ export async function getImageIds(): Promise<Set<string>> {
   return new Set(assembleImages(drive, dayInTz(Date.now(), env.timezone)).map((i) => i.id));
 }
 
+/**
+ * The forecast, or null when weather is off, has no location, or has never loaded. Never throws.
+ * A configured location whose lookup or forecast failed with no earlier copy marks "weather" degraded.
+ */
+async function loadWeatherSource(
+  config: Settings,
+  degraded: Playlist["degraded"],
+): Promise<PlaylistWeather | null> {
+  if (!config.weather.enabled) return null;
+  const location = getWeatherLocation();
+  if (!location) return null;
+  const { timezone } = config;
+  const units = config.weather.units;
+  let coords: { latitude: number; longitude: number } | null;
+  if (location.kind === "coords") coords = location;
+  else {
+    coords = await resilient("location", () => loadLocation(location.zip, location.country));
+    if (!coords) console.warn("[weather] could not resolve WEATHER_ZIP; weather disabled until it can");
+  }
+  const weather = coords
+    ? await resilient("weather", () => loadWeather(coords.latitude, coords.longitude, timezone, units))
+    : null;
+  if (!weather) degraded.push("weather");
+  return weather;
+}
+
 export async function getPlaylist(): Promise<Playlist> {
   const env = getEnv();
   const now = Date.now();
@@ -129,8 +171,10 @@ export async function getPlaylist(): Promise<Playlist> {
   );
   if (!cal) degraded.push("calendar");
 
+  const weather = await loadWeatherSource(config, degraded);
+
   const events: PlaylistEvent[] = (cal?.events ?? []).filter((e) => e.end >= now);
   const images = drive ? assembleImages(drive, dayInTz(now, config.timezone)) : [];
-  return { images, events, config, serverTime: now, degraded };
+  return { images, events, config, weather, serverTime: now, degraded };
 }
 

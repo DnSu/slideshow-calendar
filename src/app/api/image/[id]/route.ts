@@ -22,7 +22,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     return new Response(await upstream.arrayBuffer(), {
       headers: {
         "Content-Type": type,
-        // A replaced file keeps its ID, so it can take up to 7 days to change.
+        // Safe to cache long: a replaced file gets a new ?v= in its URL (see fileVersion).
         "Cache-Control": "public, max-age=604800, s-maxage=604800",
       },
     });

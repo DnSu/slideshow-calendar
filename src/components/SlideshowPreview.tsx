@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { demoEvents } from "@/lib/demoEvents";
+import { demoWeather } from "@/lib/demoWeather";
+import { weatherView } from "@/lib/weatherView";
 import { eventPages } from "@/lib/events";
 import { imageUrl } from "@/lib/offline";
-import { activeImages, sequence, type Step } from "@/lib/slides";
+import { activeImages, previewCycle, type Step } from "@/lib/slides";
 import type { Playlist, PlaylistImage } from "@/lib/types";
 import CalendarSlide from "./CalendarSlide";
+import WeatherSlide from "./WeatherSlide";
 
 type Props = { demo: boolean };
 
 /**
  * Developer preview of the slideshow (/slideshow) in a portrait 9:16 frame. Never advances on
- * its own: the buttons below the frame (or ← / →) step through the same order the player uses.
+ * its own: the buttons below the frame (or ← / →) step through a loop of every image once,
+ * then each calendar page, then the weather (shorter than the player's real order).
  *   ?demo   use made-up calendar events instead of the live feed
  */
 export default function SlideshowPreview({ demo }: Props) {
@@ -50,30 +54,31 @@ export default function SlideshowPreview({ demo }: Props) {
   const pageCount = cfg
     ? eventPages(events, nowMs, cfg.timezone, cfg.calendar).length
     : 0;
-  // Active images, plus the calendar if it has events: the slide number loops 1..assetCount.
-  const assetCount = images.length + (pageCount > 0 ? 1 : 0);
-  const byId = useMemo(() => new Map(images.map((i) => [i.id, i])), [images]);
-
-  // Replay the player's order up to one step past the current one (so we know if Next works).
-  const steps = useMemo(
+  const weather = useMemo(
     () =>
       cfg
-        ? sequence(
-            index + 2,
-            images.map((i) => i.id),
-            pageCount,
-            cfg.calendar.showAfterImages,
-          )
-        : [],
-    [cfg, images, pageCount, index],
+        ? demo
+          ? demoWeather(nowMs, cfg.timezone, cfg.weather.units)
+          : (playlist?.weather ?? null)
+        : null,
+    [cfg, demo, nowMs, playlist],
   );
-  const step = steps[index];
-  const following = steps[index + 1];
+  const hasWeather =
+    !!cfg && (demo || cfg.weather.enabled) && weatherView(weather, nowMs, cfg.timezone) !== null;
+  const byId = useMemo(() => new Map(images.map((i) => [i.id, i])), [images]);
 
-  const next = useCallback(() => {
-    if (following) setIndex((i) => i + 1);
-  }, [following]);
-  const prev = useCallback(() => setIndex((i) => Math.max(0, i - 1)), []);
+  // Every image once, then each calendar page, then weather, then round again.
+  const cycle = useMemo(
+    () => previewCycle(images.map((i) => i.id), pageCount, hasWeather),
+    [images, pageCount, hasWeather],
+  );
+  const total = cycle.length;
+  const position = total ? index % total : 0;
+  const step = cycle[position];
+  const following = total ? cycle[(position + 1) % total] : undefined;
+
+  const next = useCallback(() => setIndex((i) => i + 1), []);
+  const prev = useCallback(() => setIndex((i) => (total ? ((i % total) - 1 + total) % total : 0)), [total]);
   const restart = useCallback(() => setIndex(0), []);
 
   useEffect(() => {
@@ -88,15 +93,18 @@ export default function SlideshowPreview({ demo }: Props) {
   // Preload the next image so stepping forward is instant.
   useEffect(() => {
     if (following?.slide.kind === "image")
-      new Image().src = imageUrl(following.slide.id);
-  }, [following]);
+      new Image().src = imageUrl(
+        following.slide.id,
+        byId.get(following.slide.id)?.version,
+      );
+  }, [following, byId]);
 
   let notice: string | null = null;
   if (error) notice = `Could not load /api/playlist: ${error}`;
   else if (!cfg) notice = "Loading…";
   else if (!step)
     notice =
-      "Nothing to show: no active images and no upcoming events. The screen would be black.";
+      "Nothing to show: no active images, no upcoming events and no weather. The screen would be black.";
 
   return (
     <div className="preview-page">
@@ -110,10 +118,19 @@ export default function SlideshowPreview({ demo }: Props) {
             {step.slide.kind === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={imageUrl(step.slide.id)}
+                src={imageUrl(step.slide.id, byId.get(step.slide.id)?.version)}
                 alt=""
                 style={{ objectFit: cfg.slideshow.imageFit }}
               />
+            ) : step.slide.kind === "weather" ? (
+              weather && (
+                <WeatherSlide
+                  weather={weather}
+                  nowMs={nowMs}
+                  timezone={cfg.timezone}
+                  settings={cfg.weather}
+                />
+              )
             ) : (
               <CalendarSlide
                 events={events}
@@ -130,13 +147,13 @@ export default function SlideshowPreview({ demo }: Props) {
 
       <div className="preview-controls">
         <div className="preview-buttons">
-          <button type="button" onClick={prev} disabled={index === 0}>
+          <button type="button" onClick={prev} disabled={!total}>
             ◀ Prev
           </button>
-          <button type="button" onClick={next} disabled={!following}>
+          <button type="button" onClick={next} disabled={!total}>
             Next ▶
           </button>
-          <button type="button" onClick={restart} disabled={index === 0}>
+          <button type="button" onClick={restart} disabled={position === 0}>
             Restart
           </button>
         </div>
@@ -144,12 +161,13 @@ export default function SlideshowPreview({ demo }: Props) {
           {step && cfg
             ? describe(
                 step,
-                index % assetCount,
-                assetCount,
+                position,
+                total,
                 byId,
                 pageCount,
                 cfg.slideshow.imageSeconds,
                 cfg.calendar.displaySeconds,
+                cfg.weather.displaySeconds,
               )
             : "—"}
         </div>
@@ -169,7 +187,7 @@ function windowText(i: PlaylistImage): string {
   return `${i.start} – ${i.end}`;
 }
 
-/** `position` loops 0..total-1, where total = active images, plus 1 for the calendar if it has events. */
+/** `position` loops 0..total-1 over the preview cycle: images, calendar pages, weather. */
 function describe(
   step: Step,
   position: number,
@@ -178,8 +196,10 @@ function describe(
   pageCount: number,
   imageSeconds: number,
   calendarSeconds: number,
+  weatherSeconds: number,
 ): string {
   const n = `Slide ${position + 1} of ${total}`;
+  if (step.slide.kind === "weather") return `${n} · Weather · ${weatherSeconds}s on screen`;
   if (step.slide.kind === "calendar") {
     return `${n} · Calendar page ${step.page + 1} of ${pageCount} · ${calendarSeconds}s on screen`;
   }

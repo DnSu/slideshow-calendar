@@ -25,21 +25,23 @@ export async function setupOffline(): Promise<void> {
   }
 }
 
-export function imageUrl(id: string) {
-  return `/api/image/${encodeURIComponent(id)}`;
+/** `version` changes when the file is replaced in Drive, giving the new picture a new URL. */
+export function imageUrl(id: string, version?: string) {
+  const base = `/api/image/${encodeURIComponent(id)}`;
+  return version ? `${base}?v=${encodeURIComponent(version)}` : base;
 }
 
-/** Tell the worker which images are still wanted; it deletes the rest. */
-export function pruneImages(ids: string[]) {
-  navigator.serviceWorker?.controller?.postMessage({ type: "prune", urls: ids.map(imageUrl) });
+/** Tell the worker which image URLs are still wanted; it deletes the rest (including old versions). */
+export function pruneImages(urls: string[]) {
+  navigator.serviceWorker?.controller?.postMessage({ type: "prune", urls });
 }
 
 /** Download every image once so the worker has saved it for offline use. Stops on first failure. */
-export async function warmImages(ids: string[], isCancelled: () => boolean) {
-  for (const id of ids) {
+export async function warmImages(urls: string[], isCancelled: () => boolean) {
+  for (const url of urls) {
     if (isCancelled()) return;
     try {
-      const res = await fetch(imageUrl(id));
+      const res = await fetch(url);
       if (!res.ok) continue;
       await res.arrayBuffer();
     } catch {

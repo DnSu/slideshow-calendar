@@ -10,6 +10,7 @@ No Google API key is needed. The Drive folder and the calendar only have to be p
 - 20 s per image; the calendar for 60 s after every 5 images. All adjustable.
 - Date-controlled folders (see below), checked on the screen every minute.
 - Calendar: all upcoming events (up to `fetchDays`, default a year ahead), repeating events expanded, large type for a TV. When there are more than fit, they are split into pages and each calendar turn shows the next page. Skipped when there are no upcoming events.
+- Weather: a 5-day forecast slide (today large, the next 4 days as rows) right after the calendar, from [Open-Meteo](https://open-meteo.com). Skipped when there is no location or forecast.
 - Offline: a service worker saves the page, images and playlist.
 - Server data from Google is cached for 60 minutes and shared across Vercel instances. A failed refresh keeps the last good copy.
 
@@ -33,6 +34,8 @@ Other scripts: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 | `DRIVE_FOLDER_ID` | yes | ID of the public Drive folder |
 | `CALENDAR_ID` | yes | ID of the public Google Calendar |
 | `TIMEZONE` | no (default `UTC`) | IANA timezone for folder dates and event times, e.g. `America/New_York` |
+
+Optional weather location (see below): `WEATHER_ZIP` (+ `WEATHER_COUNTRY`, default `US`), or `WEATHER_LATITUDE` + `WEATHER_LONGITUDE`.
 
 Locally they live in `.env.local` (gitignored). On Vercel, set them under Project, Settings, Environment Variables. Only `.env.example`, with placeholders, is committed. The IDs and the calendar feed URL are never sent to the browser. If a required variable is missing, `/api/playlist` answers with an error that names it.
 
@@ -71,15 +74,33 @@ For the people who manage the pictures, [`docs/HOW-TO-USE-THIS-FOLDER.txt`](docs
 
 The app reads the calendar's public iCal feed (`https://calendar.google.com/calendar/ical/<CALENDAR_ID>/public/basic.ics`). Google can take a while to refresh that feed after you edit an event.
 
+## Weather (optional)
+
+The weather slide uses the free [Open-Meteo](https://open-meteo.com) forecast API (no key). Set where it is for, in environment variables only (they are deployment data and are never sent to the browser):
+
+| Variable | Meaning |
+|---|---|
+| `WEATHER_ZIP` | Simplest: a ZIP / postal code. Looked up once with Open-Meteo's geocoding and cached for weeks. It gives the town's point, which is fine for weather. |
+| `WEATHER_COUNTRY` | 2-letter country code for the ZIP; default `US` |
+| `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` | More exact. If both are set and valid they are used instead of the ZIP. |
+
+With neither set (or an unknown ZIP), there is no weather slide; a failed lookup is noted in the server log. Settings (`weather.enabled`, `weather.units`, `weather.displaySeconds`, `weather.title`) are below. The forecast is cached with the other sources (60 minutes), and the last good copy is kept on failure. Offline screens pick days by date, hide "current" conditions older than 3 hours, and skip the slide when fewer than 2 forecast days are left.
+
+Open-Meteo is free for **non-commercial** use (data under CC BY 4.0, hence the credit on the slide); commercial use needs one of their paid plans.
+
+### Credits
+
+Weather data: [Open-Meteo.com](https://open-meteo.com) (CC BY 4.0). Icons: [Meteocons](https://github.com/basmilius/meteocons-poc) by Bas Milius (MIT), monochrome set, copied into `src/components/weather-icons/` with its license notice. To refresh them: `npm pack @meteocons/svg`, unpack it, and run `node scripts/import-meteocons.mjs <unpacked package dir>`. The script strips the animation, recolors to `currentColor` and prefixes ids; the package is not a dependency.
+
 ## Deploy to Vercel
 
 1. Push the repository to GitHub and import it in Vercel (Framework: Next.js).
-2. Add `DRIVE_FOLDER_ID`, `CALENDAR_ID` and `TIMEZONE` as environment variables.
+2. Add `DRIVE_FOLDER_ID`, `CALENDAR_ID` and `TIMEZONE` (and optionally the weather location) as environment variables.
 3. Deploy, then open the URL. A black screen is normal if the folder has no images and the calendar has no events.
 
 Node 24.x (the newest Vercel supports) is pinned via `engines` in `package.json`. The Vercel Hobby plan is for non-commercial use only; business signage needs Pro.
 
-Updates reach screens within about 70 to 80 minutes (60 minutes server cache plus the screen's 10 minute poll). Date windows are checked on the screen every minute, so they never wait for a refresh. A replaced image file keeps its Drive ID and can take up to 7 days to change; upload it as a new file to show it right away.
+Updates reach screens within about 70 to 80 minutes (60 minutes server cache plus the screen's 10 minute poll). Date windows are checked on the screen every minute, so they never wait for a refresh. A file replaced under the same name is picked up the same way: the image URL includes a version taken from Drive's "last modified" time, so screens and the CDN fetch the new picture instead of their saved copy.
 
 ## Add the Web Link in PiSignage
 
@@ -101,19 +122,21 @@ The screen never trusts a clock earlier than the last successful contact with th
 4. Reboot the player while it is still offline.
 5. After it starts, confirm the slideshow comes back. If it stays black, the browser is wiping its storage; use the fallback of packaging the app as a PiSignage offline web asset (zip).
 
-## Developer previews (`/slideshow`, `/calendar`)
+## Developer previews (`/slideshow`, `/calendar`, `/weather`)
 
-The signage screen runs at `/`. Two preview pages share a menu at the top for switching between them. The menu also has a **Sample events** toggle (made-up events, handy while the real calendar is empty; same as adding `?demo`) and a link that opens the real screen. Both pages show a portrait **9:16** frame sized to the browser window, with controls below it. The content is scaled to the frame. Neither page is linked from the screen, and both are marked `noindex`.
+The signage screen runs at `/`. Three preview pages share a menu at the top for switching between them. The menu also has a **Sample data** toggle (made-up events and a made-up forecast, handy while the real ones are empty; same as adding `?demo`) and a link that opens the real screen. Both pages show a portrait **9:16** frame sized to the browser window, with controls below it. The content is scaled to the frame. None is linked from the screen, and all are marked `noindex`.
 
-**`/slideshow`** shows the same images, calendar pages, fit and order as the screen.
+**`/slideshow`** shows the same images, calendar pages, fit and weather as the screen, in a simpler loop: every active image once (in playlist order), then each calendar page once (if there are events), then the weather (if there is a forecast), then back to the first image. This is shorter than the real screen's order, where the calendar and weather come after every `showAfterImages` images.
 
-- **It never advances on its own.** Use **◀ Prev** / **Next ▶** (or the ← / → keys); **Restart** goes back to the first slide.
-- The line between the buttons shows the slide number ("Slide 2 of 4", counting active images plus the calendar and looping back to 1), the image's date window (or the calendar page), and how long it stays up on the real screen.
+- **It never advances on its own.** Use **◀ Prev** / **Next ▶** (or the ← / → keys); Prev wraps from the first slide to the last, and Next from the last to the first. **Restart** goes back to slide 1.
+- The line between the buttons shows the position ("Slide 2 of 6", counting images, calendar pages and weather), the image's date window (or the calendar page, or weather), and how long it stays up on the real screen.
 
 **`/calendar`** shows only the calendar, drawn the way the screen draws it.
 
 - Pages rotate on the same `displaySeconds` timing as the screen. **Pause** stops the rotation, and **◀ Prev** / **Next ▶** (or ← / →) step through pages.
 - `/calendar?page=2` opens paused on page 2.
+
+**`/weather`** shows only the weather slide, in the same frame. **Reload** fetches the forecast again; the line below says when it was updated, or why it is hidden. With sample data, **◀ Prev** / **Next ▶** switch between four made-up forecasts that together use every icon.
 
 ## Settings and the Drive `config.json` override
 
@@ -132,7 +155,8 @@ Example:
     "title": "This Week"
   },
   "refresh": { "playlistMinutes": 5, "pageReloadHours": 12 },
-  "offline": { "showIndicator": false }
+  "offline": { "showIndicator": false },
+  "weather": { "units": "celsius", "displaySeconds": 20 }
 }
 ```
 
@@ -152,6 +176,11 @@ Example:
 | `refresh.playlistMinutes` | how often the screen asks for updates | Yes |
 | `refresh.pageReloadHours` | full page reload interval | Yes |
 | `offline.showIndicator` | show the offline dot | Yes |
+| `weather.enabled` | show the weather slide (needs a location in the environment) | Yes |
+| `weather.units` | `fahrenheit` (default) or `celsius`; wind follows (mph or km/h) | Yes |
+| `weather.displaySeconds` | seconds for the weather slide (15) | Yes |
+| `weather.title` | slide heading | Yes |
+| `WEATHER_ZIP`, `WEATHER_COUNTRY`, `WEATHER_LATITUDE`, `WEATHER_LONGITUDE` | weather location | No (environment only) |
 
 ## Notes and limits
 
@@ -170,12 +199,17 @@ src/lib/drive.ts             Drive listing, config.json download, thumbnails
 src/lib/calendar.ts          iCal fetch and parse (node-ical)
 src/lib/playlist.ts          cached sources and the playlist
 src/lib/slides.ts            slide order and timing, clock check
+src/lib/weather.ts           Open-Meteo forecast and ZIP lookup (zod-validated)
+src/lib/weatherCodes.ts      WMO weather code to icon and label
+src/lib/weatherView.ts       which days and conditions to show right now
 src/lib/events.ts            upcoming events, calendar pages
 src/lib/eventLabels.ts       time and multi-day labels
-src/app/(preview)/           developer previews (calendar, slideshow) and their shared menu
+src/app/(preview)/           developer previews (calendar, slideshow, weather) and their shared menu
 src/app/api/playlist         playlist JSON
 src/app/api/image/[id]       image proxy
-src/components/              Player, CalendarSlide, OfflineDot, previews and PreviewNav
+src/components/              Player, CalendarSlide, WeatherSlide, OfflineDot, previews and PreviewNav
+src/components/weather-icons Meteocons icons (generated) and their license
+scripts/import-meteocons.mjs regenerates the icons
 public/sw.js                 service worker
 tests/                       vitest tests and fixtures (fake IDs only)
 ```

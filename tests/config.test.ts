@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildSettings, defaultSettings, getEnv, mergeSettings, parseOverrideText } from "@/lib/config";
+import { buildSettings, defaultSettings, getEnv, getWeatherLocation, mergeSettings, parseOverrideText } from "@/lib/config";
 
 describe("getEnv", () => {
   it("requires the IDs", () => {
@@ -81,5 +81,53 @@ describe("docs/config.json (the copy-to-Drive template)", () => {
     const r = mergeSettings(defaultSettings, template);
     expect(r.problems).toEqual([]);
     expect(r.settings).toEqual(defaultSettings);
+  });
+});
+
+describe("weather settings", () => {
+  it("has defaults", () => {
+    expect(defaultSettings.weather).toEqual({
+      enabled: true,
+      units: "fahrenheit",
+      displaySeconds: 15,
+      title: "Weather",
+    });
+  });
+  it("accepts Drive overrides and rejects bad values per key", () => {
+    const { settings, problems } = mergeSettings(defaultSettings, {
+      weather: { units: "celsius", displaySeconds: 20, enabled: "yes", title: "" },
+    });
+    expect(settings.weather).toEqual({ enabled: true, units: "celsius", displaySeconds: 20, title: "Weather" });
+    expect(problems).toHaveLength(2);
+    expect(mergeSettings(defaultSettings, { weather: { enabled: false } }).settings.weather.enabled).toBe(false);
+  });
+});
+
+describe("getWeatherLocation", () => {
+  const warn = () => vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("is null (weather off) when nothing is set", () => {
+    expect(getWeatherLocation({})).toBeNull();
+  });
+  it("uses coordinates when both are valid, ahead of a ZIP", () => {
+    expect(
+      getWeatherLocation({ WEATHER_LATITUDE: "40.5", WEATHER_LONGITUDE: " -75.25 ", WEATHER_ZIP: "00000" }),
+    ).toEqual({ kind: "coords", latitude: 40.5, longitude: -75.25 });
+  });
+  it("falls back to the ZIP when coordinates are missing or invalid", () => {
+    warn();
+    expect(getWeatherLocation({ WEATHER_LATITUDE: "40.5", WEATHER_ZIP: "00000" })).toEqual({
+      kind: "zip", zip: "00000", country: "US",
+    });
+    expect(
+      getWeatherLocation({ WEATHER_LATITUDE: "95", WEATHER_LONGITUDE: "10", WEATHER_ZIP: "AB1 2CD", WEATHER_COUNTRY: "gb" }),
+    ).toEqual({ kind: "zip", zip: "AB1 2CD", country: "GB" });
+  });
+  it("is null for only-invalid input, and an invalid country becomes US", () => {
+    warn();
+    expect(getWeatherLocation({ WEATHER_LATITUDE: "abc", WEATHER_LONGITUDE: "1" })).toBeNull();
+    expect(getWeatherLocation({ WEATHER_ZIP: "<script>" })).toBeNull();
+    expect(getWeatherLocation({ WEATHER_ZIP: "00000", WEATHER_COUNTRY: "USA" })).toEqual({
+      kind: "zip", zip: "00000", country: "US",
+    });
   });
 });
