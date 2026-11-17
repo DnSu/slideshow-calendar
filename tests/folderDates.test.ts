@@ -73,3 +73,48 @@ describe("date helpers", () => {
     expect(dayInTz(Date.parse("2026-03-09T03:59:00Z"), "America/New_York")).toBe("2026-03-08");
   });
 });
+
+describe("yearly folders (0000)", () => {
+  const w = (name: string) => {
+    const p = parseFolderName(name);
+    if (!p.ok) throw new Error(`${name}: ${p.reason}`);
+    return p.window;
+  };
+  const on = (name: string, day: string) => isActive(w(name), Date.parse(`${day}T12:00:00Z`), "UTC");
+
+  it("parses the yearly forms", () => {
+    expect(w("0000-06-15 0000-07-05").yearly).toEqual({ from: "06-15", to: "07-05" });
+    expect(w("0000-06").yearly).toEqual({ from: "06-01", to: "06-30" });
+    expect(w("0000-02").yearly).toEqual({ from: "02-01", to: "02-29" });
+    expect(w("0000-12-25").yearly).toEqual({ from: "12-25", to: "12-25" });
+    expect(w("0000-11 0000-12").yearly).toEqual({ from: "11-01", to: "12-31" });
+  });
+
+  it("matches the same days in any year, inclusive", () => {
+    for (const year of ["2026", "2027", "2031"]) {
+      expect(on("0000-06-15 0000-07-05", `${year}-06-15`)).toBe(true);
+      expect(on("0000-06-15 0000-07-05", `${year}-07-05`)).toBe(true);
+      expect(on("0000-06-15 0000-07-05", `${year}-06-14`)).toBe(false);
+      expect(on("0000-06-15 0000-07-05", `${year}-07-06`)).toBe(false);
+    }
+    expect(on("0000-06", "2027-06-30")).toBe(true);
+    expect(on("0000-06", "2027-07-01")).toBe(false);
+    expect(on("0000-12-25", "2030-12-25")).toBe(true);
+    expect(on("0000-12-25", "2030-12-26")).toBe(false);
+  });
+
+  it("wraps over New Year", () => {
+    expect(on("0000-12-15 0000-01-05", "2026-12-31")).toBe(true);
+    expect(on("0000-12-15 0000-01-05", "2027-01-05")).toBe(true);
+    expect(on("0000-12-15 0000-01-05", "2027-01-06")).toBe(false);
+    expect(on("0000-12-15 0000-01-05", "2026-12-14")).toBe(false);
+  });
+
+  it("handles Feb 29 and rejects bad names", () => {
+    expect(on("0000-02-29", "2028-02-29")).toBe(true);
+    expect(on("0000-02-29", "2027-02-28")).toBe(false);
+    for (const bad of ["0000-13", "0000-02-30", "0000-06-15 2026-07-05", "0000-06-15 0000-07-05 0000-08-01", "0000"]) {
+      expect(parseFolderName(bad).ok, bad).toBe(false);
+    }
+  });
+});

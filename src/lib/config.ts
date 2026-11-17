@@ -64,7 +64,7 @@ export function mergeSettings(
       const path = `${section}.${key}`;
       if (ENV_ONLY.has(path)) {
         problems.push(`"${path}" cannot be set from Drive; ignored`);
-      } else if (!(key in shape)) {
+      } else if (!Object.hasOwn(shape, key)) {
         problems.push(`unknown setting "${path}"; ignored`);
       } else {
         const r = shape[key].safeParse(value);
@@ -74,7 +74,7 @@ export function mergeSettings(
     }
   }
   for (const key of Object.keys(override)) {
-    if (!(key in schema.shape) && key !== "timezone") problems.push(`unknown setting "${key}"; ignored`);
+    if (!Object.hasOwn(schema.shape, key) && key !== "timezone") problems.push(`unknown setting "${key}"; ignored`);
   }
   const merged = out as unknown as CoreSettings;
   return { settings: merged, problems };
@@ -114,7 +114,15 @@ export function parseOverrideText(text: string): unknown {
 
 /** Full settings: defaults + optional Drive override + timezone from env (or override). */
 export function buildSettings(envTimezone: string, override: unknown): Settings {
-  const { settings, problems } = mergeSettings(defaultSettings, override);
+  let merged: ReturnType<typeof mergeSettings>;
+  try {
+    merged = mergeSettings(defaultSettings, override);
+  } catch (err) {
+    // Belt and braces: a Drive file must never take the screens down.
+    console.warn(`[config] Drive config.json could not be applied; using defaults: ${(err as Error).message}`);
+    return { ...defaultSettings, timezone: envTimezone };
+  }
+  const { settings, problems } = merged;
   for (const p of problems) console.warn(`[config] ${p}`);
   let timezone = envTimezone;
   if (isRecord(override) && override.timezone !== undefined) {

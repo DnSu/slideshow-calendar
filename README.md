@@ -15,7 +15,7 @@ No Google API key is needed. The Drive folder and the calendar only have to be p
 
 ## Setup
 
-Requires Node 26 (see `.nvmrc`).
+Requires Node 24 (see `.nvmrc`).
 
 ```sh
 nvm use
@@ -52,8 +52,17 @@ Inside the root folder you can make subfolders (one level only; deeper folders a
 | `2026-12` | until Dec 31, 2026 |
 | `2026-12-31` | until Dec 31, 2026 |
 | `2026-12-01 2026-12-31` | from Dec 1 through Dec 31, 2026 |
+| `0000-06-15 0000-07-05` | **every year**, Jun 15 through Jul 5 |
+| `0000-12-15 0000-01-05` | every year, Dec 15 through Jan 5 (wraps over New Year) |
+| `0000-06` | every year, all of June |
+| `0000-11 0000-12` | every year, Nov 1 through Dec 31 |
+| `0000-12-25` | every year, Dec 25 only |
+
+Year `0000` means "every year": only the month and day are matched. Both parts of a range must use `0000`; mixing (`0000-06-15 2026-07-05`) is ignored. `0000-02-29` only shows in leap years.
 
 Dates are whole days (inclusive) in `TIMEZONE`. Any other folder name is ignored and noted in the server log.
+
+For the people who manage the pictures, [`docs/HOW-TO-USE-THIS-FOLDER.txt`](docs/HOW-TO-USE-THIS-FOLDER.txt) explains these rules in plain language. Copy it into the root of the Drive folder; text files are never shown on screen.
 
 ## Make the calendar public and find its ID
 
@@ -68,7 +77,7 @@ The app reads the calendar's public iCal feed (`https://calendar.google.com/cale
 2. Add `DRIVE_FOLDER_ID`, `CALENDAR_ID` and `TIMEZONE` as environment variables.
 3. Deploy, then open the URL. A black screen is normal if the folder has no images and the calendar has no events.
 
-Node 26.x is pinned via `engines` in `package.json`. The Vercel Hobby plan is for non-commercial use only; business signage needs Pro.
+Node 24.x (the newest Vercel supports) is pinned via `engines` in `package.json`. The Vercel Hobby plan is for non-commercial use only; business signage needs Pro.
 
 Updates reach screens within about 70 to 80 minutes (60 minutes server cache plus the screen's 10 minute poll). Date windows are checked on the screen every minute, so they never wait for a refresh. A replaced image file keeps its Drive ID and can take up to 7 days to change; upload it as a new file to show it right away.
 
@@ -101,9 +110,19 @@ The signage screen runs at `/`. For checking the calendar page on its own, open 
 - `/calendar?page=2` stays on one page; the ← / → keys step through pages.
 - It is not linked from the screen and is marked `noindex`. It only shows what the public calendar already shows.
 
+## Slideshow preview (`/slideshow`)
+
+For checking content without waiting on the timer, open `/slideshow`:
+
+- A portrait **9:16** frame sized to fit the browser window, showing the same images, calendar pages, fit, and order as the screen. The calendar is scaled to the frame.
+- **It never advances on its own.** Use the **◀ Prev** / **Next ▶** buttons below the frame (or the ← / → keys); **Restart** goes back to the first slide.
+- The line between the buttons shows the slide number, the image's file name and date window (or the calendar page), and how long it stays up on the real screen.
+- `/slideshow?demo` uses made-up calendar events.
+- Like `/calendar`, it is not linked from the screen and is marked `noindex`.
+
 ## Settings and the Drive `config.json` override
 
-Behavior defaults are in `slideshow.config.json` (no IDs or URLs). To change them without redeploying, put a file named exactly `config.json` in the **root** of the Drive folder. It is never shown as a slide. Anything you leave out keeps its default; an invalid value is ignored (default used) and noted in the server log; invalid JSON ignores the whole file.
+Behavior defaults are in `slideshow.config.json` (no IDs or URLs). To change them without redeploying, put a file named exactly `config.json` in the **root** of the Drive folder. A ready-to-copy template with every setting Drive can change, at its default value, is in [`docs/config.json`](docs/config.json) (a test keeps it in sync with the defaults). It is never shown as a slide. Anything you leave out keeps its default; an invalid value is ignored (default used) and noted in the server log; invalid JSON ignores the whole file.
 
 Example:
 
@@ -156,9 +175,12 @@ src/lib/drive.ts             Drive listing, config.json download, thumbnails
 src/lib/calendar.ts          iCal fetch and parse (node-ical)
 src/lib/playlist.ts          cached sources and the playlist
 src/lib/slides.ts            slide order and timing, clock check
+src/lib/events.ts            upcoming events, calendar pages
+src/lib/eventLabels.ts       time and multi-day labels
+src/app/calendar, slideshow  developer previews
 src/app/api/playlist         playlist JSON
 src/app/api/image/[id]       image proxy
-src/components/              Player, CalendarSlide, OfflineDot
+src/components/              Player, CalendarSlide, OfflineDot, CalendarPreview, SlideshowPreview
 public/sw.js                 service worker
 tests/                       vitest tests and fixtures (fake IDs only)
 ```

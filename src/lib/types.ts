@@ -7,6 +7,8 @@ export type PlaylistImage = {
   /** Inclusive date window in the configured timezone; null = unbounded. */
   start: Day | null;
   end: Day | null;
+  /** Repeats every year ("MM-DD" bounds); set for "0000-…" folders. */
+  yearly?: { from: string; to: string };
 };
 
 export type PlaylistEvent = {

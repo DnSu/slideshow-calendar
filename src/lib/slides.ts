@@ -48,3 +48,28 @@ export function slideDurationMs(slide: Slide, s: CoreSettings): number {
 export function trustedNow(rawNowMs: number, lastServerTimeMs: number): number {
   return Math.max(rawNowMs, lastServerTimeMs);
 }
+
+/** A slide plus, for calendar slides, which calendar page it shows. */
+export type Step = { slide: Slide; page: number };
+
+/**
+ * The first `count` steps the player would show, from the start. Calendar turns rotate through
+ * `pageCount` pages. Returns fewer steps (possibly none) when there is nothing to show.
+ */
+export function sequence(
+  count: number,
+  imageIds: string[],
+  pageCount: number,
+  showAfterImages: number,
+): Step[] {
+  const out: Step[] = [];
+  let state = initialSeqState;
+  let calendarTurns = 0;
+  while (out.length < count) {
+    const r = nextSlide(state, imageIds, pageCount > 0, showAfterImages);
+    if (!r.slide) break;
+    state = r.state;
+    out.push({ slide: r.slide, page: r.slide.kind === "calendar" ? calendarTurns++ % pageCount : 0 });
+  }
+  return out;
+}

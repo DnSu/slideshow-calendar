@@ -1,6 +1,7 @@
 import type { CoreSettings } from "@/lib/config";
 import { addDays, dayInTz } from "@/lib/dates";
 import { eventPages } from "@/lib/events";
+import { isMultiDay, spanLabel, timeLabel } from "@/lib/eventLabels";
 import type { PlaylistEvent } from "@/lib/types";
 
 type Props = {
@@ -25,13 +26,13 @@ function dayLabel(day: string, today: string) {
   return text;
 }
 
-function timeLabel(e: PlaylistEvent, tz: string) {
-  if (e.allDay) return "All day";
-  const f = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" });
-  return f.format(new Date(e.start));
-}
-
-export default function CalendarSlide({ events, nowMs, timezone, calendar, page }: Props) {
+export default function CalendarSlide({
+  events,
+  nowMs,
+  timezone,
+  calendar,
+  page,
+}: Props) {
   const pages = eventPages(events, nowMs, timezone, calendar);
   const index = pages.length ? page % pages.length : 0;
   const groups = pages[index] ?? [];
@@ -51,16 +52,29 @@ export default function CalendarSlide({ events, nowMs, timezone, calendar, page 
           <section key={g.day} className="calendar-day">
             <h2>{dayLabel(g.day, today)}</h2>
             <ul>
-              {g.events.map((e) => (
-                <li key={e.id}>
-                  <div className="event-time">{timeLabel(e, timezone)}</div>
-                  <div className="event-body">
-                    <div className="event-title">{e.title}</div>
-                    {e.location && <div className="event-location">{e.location}</div>}
-                    {e.description && <div className="event-description">{e.description}</div>}
-                  </div>
-                </li>
-              ))}
+              {g.events.map((e) => {
+                const span = spanLabel(e, g.day, timezone);
+                return (
+                  <li
+                    key={e.id}
+                    className={isMultiDay(e) ? "multi-day" : undefined}
+                  >
+                    <div className="event-time">
+                      {timeLabel(e, g.day, timezone)}
+                    </div>
+                    <div className="event-body">
+                      <div className="event-title">{e.title}</div>
+                      {span && <div className="event-span">{span}</div>}
+                      {e.location && (
+                        <div className="event-location">{e.location}</div>
+                      )}
+                      {e.description && (
+                        <div className="event-description">{e.description}</div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

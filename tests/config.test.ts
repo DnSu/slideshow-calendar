@@ -73,3 +73,13 @@ describe("buildSettings / parseOverrideText", () => {
     expect(parseOverrideText('﻿{"a":1}')).toEqual({ a: 1 });
   });
 });
+
+describe("docs/config.json (the copy-to-Drive template)", () => {
+  it("is valid, has no ignored settings, and matches the code defaults", async () => {
+    const { readFileSync } = await import("node:fs");
+    const template = JSON.parse(readFileSync(new URL("../docs/config.json", import.meta.url), "utf8"));
+    const r = mergeSettings(defaultSettings, template);
+    expect(r.problems).toEqual([]);
+    expect(r.settings).toEqual(defaultSettings);
+  });
+});

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eventPages } from "@/lib/events";
 import { mergePlaylist } from "@/lib/merge";
-import { activeImages, initialSeqState, nextSlide, trustedNow, type Slide } from "@/lib/slides";
+import { activeImages, initialSeqState, nextSlide, trustedNow, type Slide, sequence } from "@/lib/slides";
 import { defaultSettings } from "@/lib/config";
 import type { Playlist, PlaylistEvent } from "@/lib/types";
 
@@ -108,5 +108,18 @@ describe("mergePlaylist", () => {
     expect(m.images.map((i) => i.id)).toEqual(["a"]);
     expect(m.events).toEqual([]);
     expect(mergePlaylist(base({ serverTime: 3000 }), base({ serverTime: 2000 })).serverTime).toBe(3000);
+  });
+});
+
+describe("sequence", () => {
+  const kinds = (steps: ReturnType<typeof sequence>) =>
+    steps.map((s) => (s.slide.kind === "image" ? s.slide.id : `cal${s.page + 1}`));
+  it("matches the player order and rotates calendar pages", () => {
+    expect(kinds(sequence(9, ["a", "b", "c"], 2, 2))).toEqual(["a", "b", "cal1", "c", "a", "cal2", "b", "c", "cal1"]);
+  });
+  it("skips the calendar without events and is empty with nothing to show", () => {
+    expect(kinds(sequence(4, ["a", "b"], 0, 1))).toEqual(["a", "b", "a", "b"]);
+    expect(sequence(3, [], 0, 5)).toEqual([]);
+    expect(kinds(sequence(3, [], 2, 5))).toEqual(["cal1", "cal2", "cal1"]);
   });
 });

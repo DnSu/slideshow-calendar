@@ -16,7 +16,7 @@ Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen sli
 - Before committing, check the diff for anything that looks like a real ID, URL, or email.
 
 ## Environment
-- Node 26.x (`.nvmrc`; `package.json` `engines.node` = `26.x`). Run `nvm use` first.
+- Node 24.x, the newest Vercel supports (`.nvmrc`; `package.json` `engines.node` = `24.x`). Run `nvm use` first.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

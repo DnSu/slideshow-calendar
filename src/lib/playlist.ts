@@ -41,9 +41,27 @@ async function loadDrive(folderId: string, timezone: string): Promise<DriveSnaps
     if (!listing.recognized) throw new Error(`Drive subfolder page not recognised ("${f.name}")`);
     folders.push({ name: f.name, window: parsed.window, entries: listing.entries });
   }
-  const configFile = rootListing.entries.find((e) => !e.isFolder && e.name.toLowerCase() === "config.json");
-  const override = configFile ? parseOverrideText(await downloadText(configFile.id)) : null;
+  const override = await readOverride(rootListing.entries, downloadText);
   return { root: rootListing.entries, folders, override, fetchedAt: Date.now() };
+}
+
+/**
+ * The parsed Drive config.json from the root folder's entries, or null. Never throws: a
+ * missing, unreadable, oversized or malformed file is ignored (logged) so it can't stop
+ * the images from updating. Only a file named exactly "config.json" counts.
+ */
+export async function readOverride(
+  entries: DriveEntry[],
+  download: (fileId: string) => Promise<string>,
+): Promise<unknown> {
+  const file = entries.find((e) => !e.isFolder && e.name.toLowerCase() === "config.json");
+  if (!file) return null;
+  try {
+    return parseOverrideText(await download(file.id));
+  } catch (err) {
+    console.warn(`[config] could not read Drive config.json; ignored: ${(err as Error).message}`);
+    return null;
+  }
 }
 
 async function loadCalendar(calendarId: string, fetchDays: number, timezone: string) {
@@ -73,7 +91,13 @@ export function assembleImages(snapshot: Pick<DriveSnapshot, "root" | "folders">
   const images: PlaylistImage[] = [];
   const add = (entries: DriveEntry[], w: DateWindow) => {
     for (const e of entries.filter(isImageEntry).sort(byName)) {
-      images.push({ id: e.id, name: e.name, start: w.start, end: w.end });
+      images.push({
+        id: e.id,
+        name: e.name,
+        start: w.start,
+        end: w.end,
+        ...(w.yearly ? { yearly: w.yearly } : {}),
+      });
     }
   };
   add(snapshot.root, { start: null, end: null });

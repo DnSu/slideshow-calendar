@@ -1,0 +1,98 @@
+HOW TO USE THIS FOLDER
+======================
+
+Pictures in this folder are shown on the building's screens.
+This text file is never shown on screen; only pictures are.
+
+
+1. PICTURES THAT ALWAYS SHOW
+----------------------------
+Put a picture directly in this folder (not inside another folder)
+and it will show all the time, until you delete it.
+
+
+2. PICTURES FOR CERTAIN DATES
+-----------------------------
+Make a folder inside this folder, name it with dates, and put the
+pictures inside it. The name decides when the pictures show.
+
+  Folder name              Pictures show
+  -----------------------  ------------------------------------------
+  2026-12                  from now until the end of December 2026
+  2026-12-31               from now until December 31, 2026
+  2026-12-01 2026-12-31    from December 1 through December 31, 2026
+
+Write dates as YEAR-MONTH-DAY with numbers, for example 2026-03-07
+(not 2026-3-7). Put ONE space between two dates. Both dates count:
+the pictures show for the whole first day and the whole last day.
+
+
+3. PICTURES THAT COME BACK EVERY YEAR
+-------------------------------------
+Use 0000 as the year. Only the month and day matter, so the folder
+works every year without being changed.
+
+  Folder name              Pictures show
+  -----------------------  ------------------------------------------
+  0000-06-15 0000-07-05    every year, June 15 through July 5
+  0000-12-15 0000-01-05    every year, December 15 through January 5
+  0000-06                  every year, all of June
+  0000-11 0000-12          every year, November 1 through December 31
+  0000-12-25               every year, December 25 only
+
+Don't mix: "0000-06-15 2026-07-05" will not work.
+
+
+4. THINGS TO KNOW
+-----------------
+- Folders with any other name are ignored. Nothing in them shows.
+  Examples that will NOT work: "December", "2026-13-01",
+  "2026-12-31 2026-12-01" (ends before it starts), "12-25".
+- Only one level of folders. A folder inside a date folder is ignored.
+- Pictures show in name order: loose pictures first, then each date
+  folder in name order. Number file names to control the order,
+  for example 01-welcome.jpg, 02-pool-hours.jpg.
+- Use pictures the same shape as the screen (for a tall screen,
+  1080 wide by 1920 high). Other shapes are trimmed at the edges
+  to fill the screen.
+- Use JPG or PNG files.
+- Changes can take up to about an hour and a half to appear.
+- Old date folders stop showing by themselves. You can delete them
+  whenever you like.
+- Don't rename the file called config.json if there is one.
+  It holds the screen settings (see below).
+
+
+5. SCREEN SETTINGS (config.json)
+--------------------------------
+A file named exactly config.json in this folder changes how the
+screens behave. If there is no such file, the screens use their
+built-in settings, which are the same as the values below.
+
+  Setting            What it does
+  -----------------  ------------------------------------------------
+  imageSeconds       seconds each picture stays on screen (20)
+  imageFit           "cover" fills the screen and trims the edges;
+                     "contain" shows the whole picture with black bars
+  transitionMs       length of the fade between pictures, in
+                     thousandths of a second (1000 = 1 second)
+  showAfterImages    how many pictures before the calendar shows (5)
+  displaySeconds     seconds each calendar page stays on screen (60)
+  fetchDays          how many days ahead to list events (365)
+  eventsPerPage      events per calendar page (8)
+  title              heading at the top of the calendar
+  playlistMinutes    how often screens check for changes (10)
+  pageReloadHours    how often screens fully restart the page (6)
+  showIndicator      true shows a small dot when a screen is offline
+
+To change a setting, edit the number or text and save. Keep the
+quotes, commas and brackets exactly as they are. You can delete
+lines you don't want to change (keep the commas correct), and you
+can add "timezone": "America/Chicago" at the top level to change
+the time zone.
+
+If the file has a mistake, the screens ignore the broken part and
+keep their built-in settings, so a typo can't break the screens.
+Changes take effect within about an hour and a half.
+
+Deleting config.json returns everything to the built-in settings.

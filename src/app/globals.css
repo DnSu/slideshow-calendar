@@ -1,3 +1,8 @@
+:root {
+  --vh: 1vh;
+  --vw: 1vw;
+}
+
 html,
 body {
   margin: 0;
@@ -54,11 +59,12 @@ body {
   opacity: 0.6;
 }
 
-/* Calendar: sized in vh/vw so it stays readable from across a room. */
+/* Calendar: sized in screen units (--vh/--vw = 1% of the screen) so it stays readable from
+   across a room. Previews set --vh/--vw to 1% of their frame instead. */
 .calendar {
   box-sizing: border-box;
   height: 100%;
-  padding: 4vh 5vw;
+  padding: calc(4 * var(--vh)) calc(5 * var(--vw));
   display: flex;
   flex-direction: column;
   background: #000;
@@ -70,19 +76,19 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 2vw;
-  margin: 0 0 4vh;
+  gap: calc(2 * var(--vw));
+  margin: 0 0 calc(4 * var(--vh));
 }
 
 .calendar-page {
-  font-size: 2.4vh;
+  font-size: calc(2.4 * var(--vh));
   opacity: 0.6;
   white-space: nowrap;
 }
 
 .calendar h1 {
   margin: 0;
-  font-size: 5vh;
+  font-size: calc(5 * var(--vh));
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -94,16 +100,16 @@ body {
 }
 
 .calendar-day h2 {
-  margin: 0 0 2.2vh;
-  padding-bottom: 0.8vh;
-  border-bottom: 0.3vh solid #444;
-  font-size: 2.9vh;
+  margin: 0 0 calc(2.2 * var(--vh));
+  padding-bottom: calc(0.8 * var(--vh));
+  border-bottom: calc(0.3 * var(--vh)) solid #444;
+  font-size: calc(2.9 * var(--vh));
   font-weight: 600;
   color: #ffd166;
 }
 
 .calendar-day + .calendar-day {
-  margin-top: 5.5vh;
+  margin-top: calc(5.5 * var(--vh));
 }
 
 .calendar ul {
@@ -114,13 +120,13 @@ body {
 
 .calendar li {
   display: flex;
-  gap: 3vw;
-  margin: 0 0 2.6vh;
+  gap: calc(3 * var(--vw));
+  margin: 0 0 calc(2.6 * var(--vh));
 }
 
 .event-time {
-  flex: 0 0 12vw;
-  font-size: 2.7vh;
+  flex: 0 0 calc(12 * var(--vw));
+  font-size: calc(2.7 * var(--vh));
   font-weight: 600;
   color: #9fd3ff;
 }
@@ -131,15 +137,28 @@ body {
 }
 
 .event-title {
-  font-size: 3.2vh;
+  font-size: calc(3.2 * var(--vh));
   font-weight: 600;
   line-height: 1.2;
-  margin-bottom: 0.4vh;
+  margin-bottom: calc(0.4 * var(--vh));
+}
+
+/* Multi-day events: a date-range line under the title and an accent bar on the left. */
+.event-span {
+  font-size: calc(2.3 * var(--vh));
+  font-weight: 600;
+  color: #ffd166;
+  margin-bottom: calc(0.3 * var(--vh));
+}
+
+.calendar li.multi-day .event-body {
+  border-left: calc(0.4 * var(--vh)) solid #ffd166;
+  padding-left: calc(1.2 * var(--vw));
 }
 
 .event-location {
-  font-size: 2.3vh;
-  margin-bottom: 0.3vh;
+  font-size: calc(2.3 * var(--vh));
+  margin-bottom: calc(0.3 * var(--vh));
   color: #ccc;
 }
 
@@ -148,7 +167,7 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: 2.2vh;
+  font-size: calc(2.2 * var(--vh));
   line-height: 1.35;
   color: #aaa;
 }
@@ -164,4 +183,75 @@ body {
   text-align: center;
   font-size: 3vh;
   color: #bbb;
+}
+
+/* /slideshow developer preview: a portrait 9:16 frame with controls below it. */
+.preview-page {
+  --controls: 72px;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #1b1b1f;
+  cursor: auto;
+}
+
+.preview-frame {
+  /* Largest 9:16 frame that fits beside the controls. 1% of its height/width: */
+  --vh: calc(min(100vh - var(--controls) - 44px, (100vw - 32px) * 16 / 9) / 100);
+  --vw: calc(var(--vh) * 9 / 16);
+  position: relative;
+  height: calc(100 * var(--vh));
+  width: calc(100 * var(--vw));
+  flex: none;
+  background: #000;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #333, 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.preview-frame .preview-notice {
+  font-size: calc(2.5 * var(--vh));
+}
+
+.preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--controls);
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 14px;
+  color: #ddd;
+}
+
+.preview-controls button {
+  font: inherit;
+  padding: 8px 16px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #2a2a30;
+  color: #fff;
+  cursor: pointer;
+}
+
+.preview-controls button:hover:not(:disabled) {
+  background: #3a3a42;
+}
+
+.preview-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.preview-info {
+  min-width: 260px;
+  max-width: 520px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }

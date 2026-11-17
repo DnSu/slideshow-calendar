@@ -92,7 +92,11 @@ export async function listFolder(folderId: string): Promise<DriveListing> {
   return parseFolderListing(await getText(folderListingUrl(folderId)));
 }
 
-/** Download a small public file as text (used for config.json). Throws on failure. */
+const MAX_DOWNLOAD_CHARS = 64 * 1024;
+
+/** Download a small public file as text (used for config.json). Throws on failure or if too big. */
 export async function downloadText(fileId: string): Promise<string> {
-  return getText(downloadUrl(fileId));
+  const text = await getText(downloadUrl(fileId));
+  if (text.length > MAX_DOWNLOAD_CHARS) throw new Error(`file is larger than ${MAX_DOWNLOAD_CHARS} characters`);
+  return text;
 }

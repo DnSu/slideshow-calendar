@@ -1,4 +1,4 @@
-import { dayInTz } from "./dates";
+import { addDays, dayInTz, zonedMidnight } from "./dates";
 import type { PlaylistEvent } from "./types";
 
 const HOUR = 3_600_000;
@@ -52,6 +52,26 @@ export function demoEvents(nowMs: number, tz: string): PlaylistEvent[] {
       description: "Agenda: lobby renovation, holiday decorations, open questions.",
     }),
   ];
+  // Multi-day: one running since yesterday (timed), one upcoming (all-day, 3 days).
+  events.push(
+    make("elections", "Board elections (voting open)", -DAY - 2 * HOUR, 2 * DAY + 4 * HOUR, {
+      location: "Management office",
+      description: "Drop your ballot in the box any time voting is open.",
+    }),
+  );
+  const holidayFirst = addDays(dayInTz(nowMs, tz), 4);
+  const holidayLast = addDays(holidayFirst, 2);
+  events.push({
+    id: "holiday",
+    title: "Holiday weekend – office closed",
+    location: "",
+    description: "Emergency maintenance only. Call the front desk.",
+    allDay: true,
+    start: zonedMidnight(holidayFirst, tz),
+    end: zonedMidnight(addDays(holidayLast, 1), tz),
+    startDay: holidayFirst,
+    endDay: holidayLast,
+  });
   for (let week = 0; week < 6; week++) {
     events.push(
       make(`yoga-${week}`, "Morning yoga", (week * 7 + 1) * DAY + 5 * HOUR, HOUR, {
