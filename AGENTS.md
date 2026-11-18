@@ -15,6 +15,9 @@ Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen sli
 - Tests and fixtures use made-up IDs and fake sample data.
 - Before committing, check the diff for anything that looks like a real ID, URL, or email.
 
+## Local signage assets
+- Before working on `local-signage-assets/`, read `local-signage-assets/AGENTS.md` if present. This folder is gitignored and may be absent in a fresh checkout.
+
 ## Styling
 - Colors and the font family are defined once, as CSS variables on `:root` at the top of `src/app/globals.css` (`--color-*` for the signage screen, `--ui-*` for the preview chrome, `--font-sans`). The font is Inter, self-hosted with `next/font/google` in `src/app/layout.tsx`; change fonts there, not per component. A small reset at the top of `globals.css` sets the common starting point.
 - Component styles live next to the component as a CSS module (`Foo.tsx` + `Foo.module.css`, camelCase class names, `import styles from "./Foo.module.css"`). Styles shared by several components go in one shared module (e.g. `Preview.module.css` for the preview pages). `globals.css` holds only the variables, the reset and the `html`/`body` base; no component rules there.

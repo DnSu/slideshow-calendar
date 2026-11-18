@@ -18,8 +18,8 @@ next-env.d.ts
 # testing
 coverage/
 
-# local scratchpad
-/scratchpad/
+# local signage assets
+/local-signage-assets/
 
 # OS / editor
 .DS_Store
