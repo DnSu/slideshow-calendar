@@ -1,0 +1,52 @@
+/* ⋮ menu for the preview controls. Colors and fonts come from the variables in src/app/globals.css. */
+
+.root {
+  position: relative;
+}
+
+/* Two classes so these win over the shared `.previewControls button` rule. */
+.root .trigger {
+  min-width: 44px;
+  padding: 8px 12px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.root .menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-bar);
+  box-shadow: 0 8px 24px var(--ui-shadow);
+}
+
+.root .item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.root .item:hover:not(:disabled),
+.root .item:focus-visible {
+  background: var(--ui-button-hover);
+}
+
+.check {
+  width: 1em;
+  color: var(--color-accent);
+}

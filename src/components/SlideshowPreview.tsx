@@ -12,6 +12,7 @@ import type { Playlist, PlaylistImage } from "@/lib/types";
 import CalendarSlide from "./CalendarSlide";
 import WeatherSlide from "./WeatherSlide";
 import styles from "./Preview.module.css";
+import MoreMenu from "./MoreMenu";
 import NothingToShow from "./NothingToShow";
 import { emptyReasons } from "@/lib/emptyState";
 import layerStyles from "./Player.module.css";
@@ -184,6 +185,11 @@ export default function SlideshowPreview({ demo }: Props) {
     setRefreshNote(null);
     setIndex(0);
   }, []);
+  const toggleAll = useCallback(() => {
+    setShowAll((v) => !v);
+    setIndex(0);
+    setRefreshNote(null);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -267,30 +273,43 @@ export default function SlideshowPreview({ demo }: Props) {
           <button type="button" onClick={next} disabled={!total}>
             Next ▶
           </button>
-          <button type="button" onClick={restart} disabled={position === 0}>
-            Restart
-          </button>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={refreshing}
-            title="Re-read Drive, the calendar and the weather now; screens get it at their next check (within 10 minutes)"
-          >
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
-          <button
-            type="button"
-            className={showAll ? styles.active : undefined}
-            aria-pressed={showAll}
-            onClick={() => {
-              setShowAll((v) => !v);
-              setIndex(0);
-              setRefreshNote(null);
-            }}
-            title="Also show every-year images outside their dates and images whose dates haven't started"
-          >
-            {showAll ? "All images" : "Active now"}
-          </button>
+          {/* Wide screens: the buttons. Narrow screens: the same actions in a ⋮ menu. */}
+          <span className={styles.previewWide}>
+            <button type="button" onClick={restart} disabled={position === 0}>
+              Restart
+            </button>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+              title={REFRESH_TITLE}
+            >
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+            <button
+              type="button"
+              className={showAll ? styles.active : undefined}
+              aria-pressed={showAll}
+              onClick={toggleAll}
+              title={SHOW_ALL_TITLE}
+            >
+              {showAll ? "All images" : "Active now"}
+            </button>
+          </span>
+          <span className={styles.previewNarrow}>
+            <MoreMenu
+              items={[
+                { label: "Restart", onSelect: restart, disabled: position === 0 },
+                {
+                  label: refreshing ? "Refreshing…" : "Refresh",
+                  onSelect: () => void refresh(),
+                  disabled: refreshing,
+                  title: REFRESH_TITLE,
+                },
+                { label: "All images", onSelect: toggleAll, checked: showAll, title: SHOW_ALL_TITLE },
+              ]}
+            />
+          </span>
         </div>
         <div className={styles.previewInfo}>
           {emergency && !refreshNote && (
@@ -317,6 +336,11 @@ export default function SlideshowPreview({ demo }: Props) {
     </div>
   );
 }
+
+const REFRESH_TITLE =
+  "Re-read Drive, the calendar and the weather now; screens get it at their next check (within 10 minutes)";
+const SHOW_ALL_TITLE =
+  "Also show every-year images outside their dates and images whose dates haven't started";
 
 /** `position` loops 0..total-1 over the preview cycle: images, calendar pages, weather. */
 function describe(

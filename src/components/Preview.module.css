@@ -26,9 +26,10 @@
 }
 
 .previewFrame {
-  /* Largest 9:16 frame that fits beside the controls. 1% of its height/width: */
+  /* Largest 9:16 frame that fits beside the controls. 1% of its height/width.
+     dvh: the height actually visible on phones, between the browser's bars. */
   --vh: calc(
-    min(100vh - var(--nav) - var(--controls) - 44px, (100vw - 32px) * 16 / 9) /
+    min(100dvh - var(--nav) - var(--controls) - 44px, (100vw - 32px) * 16 / 9) /
       100
   );
   --vw: calc(var(--vh) * 9 / 16);
@@ -79,6 +80,26 @@
 
 .previewControls button:hover:not(:disabled) {
   background: var(--ui-button-hover);
+}
+
+/* Slideshow preview: Restart, Refresh and the image toggle as buttons on wide screens,
+   in a ⋮ menu (MoreMenu) on narrow ones. `contents` keeps the row's gap between buttons. */
+.previewWide {
+  display: contents;
+}
+
+.previewNarrow {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .previewWide {
+    display: none;
+  }
+
+  .previewNarrow {
+    display: contents;
+  }
 }
 
 .previewEmergency {
