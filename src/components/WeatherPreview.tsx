@@ -5,14 +5,15 @@ import { DEMO_WEATHER_VARIANTS, demoWeather } from "@/lib/demoWeather";
 import type { Playlist } from "@/lib/types";
 import { weatherView } from "@/lib/weatherView";
 import WeatherSlide from "./WeatherSlide";
+import { NextIcon, PrevIcon, RefreshIcon } from "./PreviewIcons";
 import styles from "./Preview.module.css";
 
 type Props = { demo: boolean };
 
 /**
  * Developer preview of the weather slide (/weather) in the same portrait 9:16 frame as /calendar.
- *   ?demo         made-up forecast instead of the live one; ◀ Prev / Next ▶ switch between sets of icons
- *   Reload        fetches the playlist (and so the forecast) again
+ *   ?demo         made-up forecast instead of the live one; ‹ / › switch between sets of icons
+ *   ⟳             fetches the playlist (and so the forecast) again
  */
 export default function WeatherPreview({ demo }: Props) {
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
@@ -112,14 +113,34 @@ export default function WeatherPreview({ demo }: Props) {
 
       <div className={styles.previewControls}>
         <div className={styles.previewButtons}>
-          <button type="button" onClick={() => step(-1)} disabled={!demo}>
-            ◀ Prev
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => step(-1)}
+            disabled={!demo}
+            aria-label="Previous sample"
+            title="Previous sample (←)"
+          >
+            <PrevIcon />
           </button>
-          <button type="button" onClick={() => step(1)} disabled={!demo}>
-            Next ▶
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => step(1)}
+            disabled={!demo}
+            aria-label="Next sample"
+            title="Next sample (→)"
+          >
+            <NextIcon />
           </button>
-          <button type="button" onClick={load}>
-            Reload
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={load}
+            aria-label="Reload"
+            title="Load the forecast again"
+          >
+            <RefreshIcon />
           </button>
         </div>
         <div className={styles.previewInfo}>{info}</div>

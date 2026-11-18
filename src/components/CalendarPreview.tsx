@@ -5,6 +5,7 @@ import { demoEvents } from "@/lib/demoEvents";
 import { eventPages } from "@/lib/events";
 import type { Playlist } from "@/lib/types";
 import CalendarSlide from "./CalendarSlide";
+import { NextIcon, PrevIcon } from "./PreviewIcons";
 import styles from "./Preview.module.css";
 
 type Props = { demo: boolean; pinnedPage: number | null };
@@ -104,11 +105,25 @@ export default function CalendarPreview({ demo, pinnedPage }: Props) {
 
       <div className={styles.previewControls}>
         <div className={styles.previewButtons}>
-          <button type="button" onClick={prev} disabled={!multi}>
-            ◀ Prev
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={prev}
+            disabled={!multi}
+            aria-label="Previous page"
+            title="Previous page (←)"
+          >
+            <PrevIcon />
           </button>
-          <button type="button" onClick={next} disabled={!multi}>
-            Next ▶
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={next}
+            disabled={!multi}
+            aria-label="Next page"
+            title="Next page (→)"
+          >
+            <NextIcon />
           </button>
           <button
             type="button"

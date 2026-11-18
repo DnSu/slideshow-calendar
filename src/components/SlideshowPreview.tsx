@@ -13,6 +13,7 @@ import CalendarSlide from "./CalendarSlide";
 import WeatherSlide from "./WeatherSlide";
 import styles from "./Preview.module.css";
 import MoreMenu from "./MoreMenu";
+import { NextIcon, PrevIcon, RefreshIcon } from "./PreviewIcons";
 import NothingToShow from "./NothingToShow";
 import { emptyReasons } from "@/lib/emptyState";
 import layerStyles from "./Player.module.css";
@@ -21,7 +22,7 @@ type Props = { demo: boolean };
 
 /**
  * Developer preview of the slideshow (/slideshow) in a portrait 9:16 frame. Never advances on
- * its own: the buttons below the frame (or ← / →) step through a loop of every image once,
+ * its own: the ‹ › buttons below the frame (or ← / →) step through a loop of every image once,
  * then each calendar page, then the weather (shorter than the player's real order).
  *   ?demo   use made-up calendar events instead of the live feed
  */
@@ -267,49 +268,42 @@ export default function SlideshowPreview({ demo }: Props) {
 
       <div className={styles.previewControls}>
         <div className={styles.previewButtons}>
-          <button type="button" onClick={prev} disabled={!total}>
-            ◀ Prev
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={prev}
+            disabled={!total}
+            aria-label="Previous slide"
+            title="Previous slide (←)"
+          >
+            <PrevIcon />
           </button>
-          <button type="button" onClick={next} disabled={!total}>
-            Next ▶
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={next}
+            disabled={!total}
+            aria-label="Next slide"
+            title="Next slide (→)"
+          >
+            <NextIcon />
           </button>
-          {/* Wide screens: the buttons. Narrow screens: the same actions in a ⋮ menu. */}
-          <span className={styles.previewWide}>
-            <button type="button" onClick={restart} disabled={position === 0}>
-              Restart
-            </button>
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              disabled={refreshing}
-              title={REFRESH_TITLE}
-            >
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
-            <button
-              type="button"
-              className={showAll ? styles.active : undefined}
-              aria-pressed={showAll}
-              onClick={toggleAll}
-              title={SHOW_ALL_TITLE}
-            >
-              {showAll ? "All images" : "Active now"}
-            </button>
-          </span>
-          <span className={styles.previewNarrow}>
-            <MoreMenu
-              items={[
-                { label: "Restart", onSelect: restart, disabled: position === 0 },
-                {
-                  label: refreshing ? "Refreshing…" : "Refresh",
-                  onSelect: () => void refresh(),
-                  disabled: refreshing,
-                  title: REFRESH_TITLE,
-                },
-                { label: "All images", onSelect: toggleAll, checked: showAll, title: SHOW_ALL_TITLE },
-              ]}
-            />
-          </span>
+          <button
+            type="button"
+            className={styles.iconButton}
+            onClick={() => void refresh()}
+            disabled={refreshing}
+            aria-label={refreshing ? "Refreshing…" : "Refresh"}
+            title={REFRESH_TITLE}
+          >
+            <RefreshIcon className={refreshing ? styles.spin : undefined} />
+          </button>
+          <MoreMenu
+            items={[
+              { label: "Restart", onSelect: restart, disabled: position === 0 },
+              { label: "All images", onSelect: toggleAll, checked: showAll, title: SHOW_ALL_TITLE },
+            ]}
+          />
         </div>
         <div className={styles.previewInfo}>
           {emergency && !refreshNote && (

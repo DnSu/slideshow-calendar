@@ -1,6 +1,8 @@
 /* Preview menu. Colors and fonts come from the variables in src/app/globals.css. */
 
 .previewNav {
+  position: relative;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -11,7 +13,6 @@
   border-bottom: 1px solid var(--ui-border);
   background: var(--ui-bar);
   font-size: 14px;
-  overflow-x: auto;
   white-space: nowrap;
 }
 
@@ -19,6 +20,19 @@
   margin-right: 10px;
   font-weight: 600;
   color: var(--ui-text-muted);
+}
+
+/* The current page's name, shown next to the title only when the links are folded away. */
+.previewNavCurrent {
+  display: none;
+  color: var(--ui-text-strong);
+}
+
+.links {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
 }
 
 .previewNav a {
@@ -47,4 +61,66 @@
   border-color: var(--color-accent);
   background: transparent;
   color: var(--color-accent);
+}
+
+.menuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 40px;
+  margin-left: auto;
+  margin-right: -8px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-text-soft);
+  cursor: pointer;
+}
+
+.menuButton:hover,
+.menuButton[aria-expanded="true"] {
+  background: var(--ui-button);
+  color: var(--ui-text-strong);
+}
+
+/* Phones: title, current page and a ☰ button; the links open in a panel under the bar. */
+@media (max-width: 720px) {
+  .previewNavCurrent {
+    display: inline;
+  }
+
+  .menuButton {
+    display: flex;
+  }
+
+  .links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 8px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-bar);
+    box-shadow: 0 8px 24px var(--ui-shadow);
+  }
+
+  .links.open {
+    display: flex;
+  }
+
+  .previewNav a {
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .previewNav .previewNavToggle {
+    margin-left: 0;
+    margin-top: 6px;
+  }
 }

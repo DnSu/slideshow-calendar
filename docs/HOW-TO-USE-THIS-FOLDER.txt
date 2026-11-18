@@ -86,8 +86,9 @@ out (or delete them) and the screens go back to normal. Leave the
 folder empty when there's no emergency.
 
 It can take up to about an hour and a half to appear on the screens.
-To make it faster, open the website's /slideshow page and press
-Refresh: the screens then change within about 10 minutes.
+To make it faster, open the website's /slideshow page and press the
+Refresh button (the circle arrow): the screens then change within
+about 10 minutes.
 
 
 4. THINGS TO KNOW

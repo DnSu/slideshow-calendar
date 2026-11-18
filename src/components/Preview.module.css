@@ -82,23 +82,35 @@
   background: var(--ui-button-hover);
 }
 
-/* Slideshow preview: Restart, Refresh and the image toggle as buttons on wide screens,
-   in a ⋮ menu (MoreMenu) on narrow ones. `contents` keeps the row's gap between buttons. */
-.previewWide {
-  display: contents;
+/* Icon-only buttons (‹ › ⟳): square, same height as the text buttons. Two classes so this
+   wins over the `.previewControls button` rule above. */
+.previewControls button.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 8px 12px;
 }
 
-.previewNarrow {
-  display: none;
+.iconButton svg {
+  display: block;
 }
 
-@media (max-width: 600px) {
-  .previewWide {
-    display: none;
+/* Refresh icon while the refresh runs. */
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
+}
 
-  .previewNarrow {
-    display: contents;
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+    opacity: 0.6;
   }
 }
 
