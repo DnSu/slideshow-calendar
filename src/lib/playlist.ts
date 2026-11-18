@@ -355,16 +355,17 @@ export function assembleImages(
   return images;
 }
 
-export async function getImageIds(): Promise<Set<string>> {
+/** Every picture /api/image may serve, with its current version (see `fileVersion`). */
+export async function getImageVersions(): Promise<Map<string, string | undefined>> {
   const env = getEnv();
   const folderId = env.driveFolderId;
-  if (!folderId) return new Set();
+  if (!folderId) return new Map();
   const drive = await resilient("drive", () =>
     loadDrive(folderId, env.timezone),
   );
-  if (!drive) return new Set();
-  return new Set(
-    assembleImages(drive, dayInTz(Date.now(), env.timezone)).map((i) => i.id),
+  if (!drive) return new Map();
+  return new Map(
+    assembleImages(drive, dayInTz(Date.now(), env.timezone)).map((i) => [i.id, i.version]),
   );
 }
 

@@ -5,17 +5,17 @@ import type { ConfigFileCheck } from "@/lib/config";
 import type { DriveIssue, DriveIssues } from "@/lib/types";
 import styles from "./DriveIssuesPanel.module.css";
 
-type Props = { issues?: DriveIssues; configFile?: ConfigFileCheck };
+type Props = { issues?: DriveIssues; configFile?: ConfigFileCheck; shrunk?: DriveIssue[] };
 
 /**
  * Under the /slideshow preview: things in the Drive folder that won't show on the screen
  * (folders with names that aren't understood, files that aren't pictures, mistakes in the
  * settings Doc or an old config.json), in plain words, so whoever manages the folder can fix them.
  */
-export default function DriveIssuesPanel({ issues, configFile }: Props) {
+export default function DriveIssuesPanel({ issues, configFile, shrunk = [] }: Props) {
   const folders = issues?.folders ?? [];
   const files = issues?.files ?? [];
-  const count = folders.length + files.length + (configFile ? 1 : 0);
+  const count = folders.length + files.length + shrunk.length + (configFile ? 1 : 0);
   if (!count) return null;
 
   return (
@@ -25,6 +25,7 @@ export default function DriveIssuesPanel({ issues, configFile }: Props) {
       </h2>
       {folders.length > 0 && <IssueList heading="Folders" items={folders} />}
       {files.length > 0 && <IssueList heading="Files that won't show" items={files} />}
+      {shrunk.length > 0 && <IssueList heading="Pictures made smaller (they still show)" items={shrunk} />}
       {configFile && <ConfigFile check={configFile} />}
       <p className={styles.hint}>Fix them in Drive (see HOW-TO-USE-THIS-FOLDER.txt), then press ⟳.</p>
     </section>

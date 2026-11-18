@@ -4,7 +4,7 @@
 
 - **Unofficial Drive page.** Folder contents come from `drive.google.com/embeddedfolderview`, which is not a documented API. Google could change it. Only `src/lib/drive.ts` knows its layout; screens keep showing saved content in the meantime. If the page is not recognised, the server keeps its previous listing.
 - An emptied folder is read as empty normally, but a page the app does not recognise at all never replaces the last good listing.
-- Images are served at 1920 px wide through `/api/image/<id>`, which only serves files that are in the current playlist.
+- Images are served through `/api/image/<id>?v=<version>`, which only serves files in the current playlist at their current version (so a made-up `?v=` can't skip the CDN cache). It asks Drive for a thumbnail at most 1920 px wide, passes on only raster types (JPEG, PNG, GIF, WebP, AVIF, BMP) with `nosniff` and a sandbox CSP, and passes pictures that already fit (long side ≤ 1920 px and ≤ 3.5 MB) through untouched. Bigger ones are fitted inside 1920 × 1920 as WebP (quality 90, `sharp`) so they load fast and stay under Vercel's 4.5 MB response limit; those carry `X-Shrunk-From-Bytes` / `X-Shrunk-To-Bytes`, which `/slideshow` reads with HEAD requests to list them in its problems box. Drive's thumbnails of PNGs are lossless (checked pixel for pixel against the originals).
 - Server logs (Vercel, Logs) note ignored folders, bad settings and failed refreshes.
 
 ## Code layout
@@ -16,6 +16,7 @@ src/lib/folderDates.ts       folder names to date windows
 src/lib/settingsText.ts      the settings Doc format (NAME = value), parse and write
 src/lib/driveIssues.ts       plain-language notes on Drive files and folders that won't show
 src/lib/drive.ts             Drive listing, settings Doc export / config file download, thumbnails
+src/lib/imageResponse.ts     image proxy rules: raster types only, safe headers, shrinking oversized pictures
 src/lib/calendar.ts          iCal fetch and parse (node-ical)
 src/lib/playlist.ts          cached sources and the playlist
 src/lib/slides.ts            slide order and timing, clock check

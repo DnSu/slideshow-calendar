@@ -14,6 +14,7 @@ import WeatherSlide from "./WeatherSlide";
 import styles from "./Preview.module.css";
 import DriveIssuesPanel from "./DriveIssuesPanel";
 import MoreMenu from "./MoreMenu";
+import { useShrunkImages } from "./useShrunkImages";
 import { NextIcon, PrevIcon, RefreshIcon } from "./PreviewIcons";
 import NothingToShow from "./NothingToShow";
 import { emptyReasons } from "@/lib/emptyState";
@@ -37,6 +38,8 @@ export default function SlideshowPreview({ demo }: Props) {
   // images whose dates haven't started (the playlist already leaves out ended folders).
   const [showAll, setShowAll] = useState(false);
   const [refreshNote, setRefreshNote] = useState<string | null>(null);
+  // Pictures the server had to make smaller, listed in the problems box.
+  const shrunk = useShrunkImages(playlist?.images);
   // Images that failed to load and made us reload the list once (so a still-broken one can't loop).
   const reloadedFor = useRef(new Set<string>());
 
@@ -215,7 +218,7 @@ export default function SlideshowPreview({ demo }: Props) {
   if (error) notice = `Could not load /api/playlist: ${error}`;
   else if (!cfg) notice = "Loading…";
 
-  const hasIssues = !!(playlist?.driveIssues || playlist?.configFile);
+  const hasIssues = !!(playlist?.driveIssues || playlist?.configFile || shrunk.length);
 
   return (
     <div
@@ -338,7 +341,11 @@ export default function SlideshowPreview({ demo }: Props) {
       </div>
 
       {hasIssues && (
-        <DriveIssuesPanel issues={playlist?.driveIssues} configFile={playlist?.configFile} />
+        <DriveIssuesPanel
+          issues={playlist?.driveIssues}
+          configFile={playlist?.configFile}
+          shrunk={shrunk}
+        />
       )}
     </div>
   );

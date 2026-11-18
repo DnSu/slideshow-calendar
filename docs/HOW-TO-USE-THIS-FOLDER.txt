@@ -107,6 +107,10 @@ about 10 minutes.
 - Use pictures the same shape as the screen (for a tall screen,
   1080 wide by 1920 high). Other shapes are trimmed at the edges
   to fill the screen.
+- Very large pictures (straight from a camera, or a big poster
+  file) still show: the website makes them smaller for the
+  screens. For the sharpest result, save them at 1080 by 1920
+  first (a PNG under 3.5 MB, or a JPG, is shown exactly as is).
 - Use JPG or PNG files. PDFs, videos, Word files, Google Slides and
   shortcuts don't show; save them as a JPG or PNG first.
 - To see what's wrong, open the website's /slideshow page. Under the
