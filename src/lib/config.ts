@@ -1,6 +1,8 @@
 import { z } from "zod";
 import defaultsJson from "../../slideshow.config.json";
 import { isValidTimezone } from "./dates";
+import { GOOGLE_DOC_MIME, type DriveEntry } from "./drive";
+import { parseSettingsText, settingLabel, settingsText } from "./settingsText";
 
 const int = (min: number, max: number) => z.number().int().min(min).max(max);
 
@@ -55,6 +57,8 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 export function mergeSettings(
   base: CoreSettings,
   override: unknown,
+  /** How problems name a setting: `"slideshow.imageSeconds"` for config.json, the Doc name for the settings Doc. */
+  label: (path: string) => string = (path) => `"${path}"`,
 ): { settings: CoreSettings; problems: string[] } {
   const problems: string[] = [];
   const out = structuredClone(base) as Record<string, Record<string, unknown>>;
@@ -77,19 +81,19 @@ export function mergeSettings(
     for (const [key, value] of Object.entries(given)) {
       const path = `${section}.${key}`;
       if (ENV_ONLY.has(path)) {
-        problems.push(`"${path}" cannot be set from Drive; ignored`);
+        problems.push(`${label(path)} cannot be set from Drive; ignored`);
       } else if (!Object.hasOwn(shape, key)) {
-        problems.push(`unknown setting "${path}"; ignored`);
+        problems.push(`unknown setting ${label(path)}; ignored`);
       } else {
         const r = shape[key].safeParse(value);
         if (r.success) out[section][key] = r.data;
-        else problems.push(`invalid value for "${path}"; using default`);
+        else problems.push(`invalid value for ${label(path)}; using default`);
       }
     }
   }
   for (const key of Object.keys(override)) {
     if (!Object.hasOwn(schema.shape, key) && key !== "timezone")
-      problems.push(`unknown setting "${key}"; ignored`);
+      problems.push(`unknown setting ${label(key)}; ignored`);
   }
   const merged = out as unknown as CoreSettings;
   return { settings: merged, problems };
@@ -212,4 +216,120 @@ export function getWeatherLocation(
     country = "US";
   }
   return { kind: "zip", zip, country };
+}
+
+/** The settings file found in the Drive folder's main folder, as read by the server. */
+export type ConfigSource = {
+  /** "doc": a Google Doc named "config"; "txt": config.txt; "json": config.json. */
+  kind: "doc" | "txt" | "json";
+  /** As people see it in Drive. */
+  name: string;
+  /** Its text, or null if it couldn't be read. */
+  text: string | null;
+  /** Other settings files in the folder, which are ignored (only one is used). */
+  ignored: string[];
+};
+
+/** What's wrong with the Drive settings file, plus a corrected Doc to paste over it. */
+export type ConfigFileCheck = {
+  /** The file, as people see it in Drive. */
+  name: string;
+  kind: ConfigSource["kind"];
+  /** Mistakes: the file (or parts of it) is ignored. */
+  problems: string[];
+  /** Settings the file doesn't list (it's older than them, or they were left out); defaults apply. */
+  missing: string[];
+  /** A suggestion that isn't a mistake (e.g. switch from config.json to the Google Doc). */
+  note?: string;
+  /** The whole settings Doc: the file's valid values kept, everything else at its default. */
+  fixed: string;
+};
+
+/**
+ * Read a settings file's text: JSON if it starts with "{" (config.json, or JSON pasted into
+ * the Doc), else the friendly NAME = value format. Never throws.
+ */
+export function readConfigText(text: string | null): {
+  override: unknown;
+  format: "json" | "lines";
+  problems: string[];
+} {
+  if (text === null)
+    return { override: null, format: "lines", problems: ["couldn't be read from Drive (is the folder still shared?)"] };
+  const t = text.replace(/^\uFEFF/, "").trim();
+  if (t.startsWith("<"))
+    return { override: null, format: "lines", problems: ["couldn't be read from Drive (is the folder still shared?)"] };
+  if (t.startsWith("{")) {
+    const override = parseOverrideText(t);
+    return override === null
+      ? {
+          override,
+          format: "json",
+          problems: ["has a mistake in its JSON (a missing comma, quote or bracket?), so all of it is ignored"],
+        }
+      : { override, format: "json", problems: [] };
+  }
+  const { override, problems } = parseSettingsText(t);
+  return { override, format: "lines", problems };
+}
+
+/** The settings from a Drive settings file (null: none). Never throws. */
+export function overrideFrom(source: ConfigSource | null): unknown {
+  return source ? readConfigText(source.text).override : null;
+}
+
+/** Check the Drive settings file. Returns null when there's none or nothing to report. */
+export function checkConfigFile(source: ConfigSource | null): ConfigFileCheck | null {
+  if (!source) return null;
+  const read = readConfigText(source.text);
+  const label = read.format === "json" ? (p: string) => `"${p}"` : settingLabel;
+  const problems = [...read.problems];
+  for (const name of source.ignored) problems.push(`${name} is ignored, because ${source.name} is used; delete one of them`);
+  const missing: string[] = [];
+  let settings = defaultSettings;
+  let timezone: string | undefined;
+  const override = read.override;
+  if (isRecord(override)) {
+    const merged = mergeSettings(defaultSettings, override, label);
+    settings = merged.settings;
+    problems.push(...merged.problems);
+    if (override.timezone !== undefined) {
+      if (typeof override.timezone === "string" && isValidTimezone(override.timezone))
+        timezone = override.timezone;
+      else problems.push(`invalid value for ${label("timezone")}; using default`);
+    }
+    for (const [section, sectionSchema] of Object.entries(schema.shape)) {
+      const given = override[section];
+      for (const key of Object.keys(sectionSchema.shape)) {
+        const path = `${section}.${key}`;
+        if (ENV_ONLY.has(path)) continue;
+        if (!isRecord(given) || !Object.hasOwn(given, key)) missing.push(label(path).replace(/"/g, ""));
+      }
+    }
+  } else if (override !== null && override !== undefined) {
+    problems.push("doesn't contain settings, so it's ignored");
+  }
+  const note =
+    source.kind === "doc"
+      ? undefined
+      : `${source.name} still works, but a Google Doc named "config" is easier to edit: make one in the main folder, paste the fixed settings into it, then delete ${source.name}`;
+  if (!problems.length && !missing.length && !note) return null;
+  return {
+    name: source.name,
+    kind: source.kind,
+    problems,
+    missing,
+    ...(note ? { note } : {}),
+    fixed: settingsText(settings, timezone),
+  };
+}
+
+/** Which settings file a Drive entry is, if any (only the main folder's are used). */
+export function configKind(e: DriveEntry): ConfigSource["kind"] | null {
+  if (e.isFolder) return null;
+  const name = e.name.trim().toLowerCase();
+  if (e.mime === GOOGLE_DOC_MIME) return name === "config" ? "doc" : null;
+  if (name === "config.txt") return "txt";
+  if (name === "config.json") return "json";
+  return null;
 }

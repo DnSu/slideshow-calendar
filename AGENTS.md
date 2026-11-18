@@ -27,7 +27,7 @@ Next.js app (Vercel) shown on PiSignage players as a Web Link: a full-screen sli
 
 ## Docs
 - `README.md` is a short overview with a table of contents. Detailed guides live in `docs/*.md` (setup, google-drive, google-calendar, weather, settings, deploy, offline, previews, architecture). Put new detail in the matching guide and link it from the README's table, rather than growing the README.
-- `docs/HOW-TO-USE-THIS-FOLDER.txt` and `docs/config.json` are copied into the Drive folder by non-technical users; keep them plain and in sync with behavior.
+- `docs/HOW-TO-USE-THIS-FOLDER.txt` and `docs/config.txt` (pasted into the Drive `config` Google Doc) are copied into the Drive folder by non-technical users; keep them plain and in sync with behavior.
 
 ## Environment
 - Node 24.x, the newest Vercel supports (`.nvmrc`; `package.json` `engines.node` = `24.x`). Run `nvm use` first.

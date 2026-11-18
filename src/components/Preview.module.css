@@ -29,7 +29,10 @@
   /* Largest 9:16 frame that fits beside the controls. 1% of its height/width.
      dvh: the height actually visible on phones, between the browser's bars. */
   --vh: calc(
-    min(100dvh - var(--nav) - var(--controls) - 44px, (100vw - 32px) * 16 / 9) /
+    min(
+      100dvh - var(--nav) - var(--controls) - var(--issues, 0px) - 44px,
+      (100vw - 32px) * 16 / 9
+    ) /
       100
   );
   --vw: calc(var(--vh) * 9 / 16);
@@ -136,4 +139,10 @@
   text-align: center;
   color: var(--ui-text-dim);
   font-variant-numeric: tabular-nums;
+}
+
+/* Slideshow preview with a DriveIssuesPanel below the controls: the frame shrinks by
+   --issues so the panel fits on screen (a long one scrolls inside). */
+.withIssues {
+  --issues: 160px;
 }

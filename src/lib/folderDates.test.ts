@@ -191,3 +191,24 @@ describe("isActiveOnDay", () => {
     );
   });
 });
+
+describe("why a folder name isn't understood", () => {
+  const why = (name: string) => {
+    const r = parseFolderName(name);
+    return r.ok ? null : r.reason;
+  };
+  it("gives a plain reason for each kind of mistake", () => {
+    expect(why("Pool party")).toBe("doesn't start with a date, like 2026-12-01");
+    expect(why("Pool closed - 2026-12-01")).toBe("doesn't start with a date, like 2026-12-01");
+    expect(why("2026-12-31 2026-12-01")).toBe("ends before it starts");
+    expect(why("2026-02-30")).toBe("has a date that doesn't exist");
+    expect(why("2026-02-30 2026-03-05")).toBe("has a date that doesn't exist");
+    expect(why("2026-13")).toBe("has a month that doesn't exist");
+    expect(why("0000-02-30")).toBe("has a yearly date that doesn't exist");
+    expect(why("0000-06-15 2026-07-05")).toBe("mixes a yearly date (0000-…) with a dated one");
+    expect(why("2026-12-01 2026-12-31 2027-01-01")).toMatch(/^isn't one date or two/);
+    expect(why("2026-12-01 Pool party")).toMatch(/^needs " - " between the dates and the description/);
+    expect(why("2026-12-01 2026-12-31 Pool")).toMatch(/^needs " - "/);
+    expect(why("2026-1-1")).toBe("doesn't start with a date, like 2026-12-01");
+  });
+});

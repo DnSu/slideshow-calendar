@@ -1,28 +1,33 @@
 import { cacheLife, cacheTag, revalidateTag } from "next/cache";
 import { fetchEvents } from "./calendar";
-import type { CoreSettings, Settings } from "./config";
+import type { ConfigSource, CoreSettings, Settings } from "./config";
 import {
   buildSettings,
+  checkConfigFile,
+  configKind,
   defaultSettings,
   getEnv,
   getWeatherLocation,
-  parseOverrideText,
+  overrideFrom,
 } from "./config";
 import { addDays, dayInTz } from "./dates";
 import {
   downloadText,
+  exportDocText,
   isImageEntry,
   listFolder,
   type DriveEntry,
   fileVersion,
 } from "./drive";
 import { parseFolderName, stripLabel, type DateWindow } from "./folderDates";
+import { emptyFolderIssue, listingIssues } from "./driveIssues";
 import { holidayOccurrence, parseHolidayRule, type HolidayRule } from "./holidays";
 import type {
   Playlist,
   PlaylistEvent,
   PlaylistImage,
   PlaylistWeather,
+  DriveIssues,
   SourceStatus,
   WeatherUnits,
 } from "./types";
@@ -40,7 +45,12 @@ type DriveSnapshot = {
    * cached before this existed.
    */
   holidays?: HolidayFolder[];
-  override: unknown;
+  /** Things that won't show, for the /slideshow preview. Absent in older cached snapshots. */
+  issues?: DriveIssues;
+  /** The settings file in the main folder (null: none). Absent in older cached snapshots. */
+  config?: ConfigSource | null;
+  /** Older cached snapshots only: the parsed config.json. */
+  override?: unknown;
   fetchedAt: number;
 };
 
@@ -62,10 +72,18 @@ type HolidayFolder = {
   entries: DriveEntry[];
 } & ({ rule: HolidayRule; window?: undefined } | { rule?: undefined; window: DateWindow });
 
-/** The folders inside "Holidays" whose names are understood, with their contents. */
-async function loadHolidayFolders(folderId: string, today: string): Promise<HolidayFolder[]> {
+/**
+ * The folders inside "Holidays" whose names are understood, with their contents. Anything
+ * that won't show goes into `issues`.
+ */
+async function loadHolidayFolders(
+  folderId: string,
+  today: string,
+  issues: DriveIssues,
+): Promise<HolidayFolder[]> {
   const listing = await listFolder(folderId);
   if (!listing.recognized) throw new Error(`Drive subfolder page not recognised ("${HOLIDAYS_FOLDER}")`);
+  issues.files.push(...listingIssues(HOLIDAYS_FOLDER, listing.entries, "holidays"));
   const out: HolidayFolder[] = [];
   for (const f of listing.entries.filter((e) => e.isFolder)) {
     const rule = parseHolidayRule(stripLabel(f.name));
@@ -75,6 +93,7 @@ async function loadHolidayFolders(folderId: string, today: string): Promise<Holi
       const parsed = parseFolderName(f.name);
       if (!parsed.ok) {
         console.warn(`[drive] ignoring holiday folder "${f.name}": not a holiday date or ${parsed.reason}`);
+        issues.folders.push({ name: `${HOLIDAYS_FOLDER} › ${f.name}`, reason: HOLIDAY_REASON });
         continue;
       }
       if (parsed.window.end && parsed.window.end < addDays(today, -1)) continue;
@@ -82,9 +101,17 @@ async function loadHolidayFolders(folderId: string, today: string): Promise<Holi
     }
     const sub = await listFolder(f.id);
     if (!sub.recognized) throw new Error(`Drive subfolder page not recognised ("${f.name}")`);
+    addFolderIssues(issues, `${HOLIDAYS_FOLDER} › ${f.name}`, sub.entries);
     out.push({ name: f.name, entries: sub.entries, ...when });
   }
   return out;
+}
+
+/** A dated or holiday folder: flag it if it has no pictures, and anything in it that won't show. */
+function addFolderIssues(issues: DriveIssues, path: string, entries: DriveEntry[]) {
+  const empty = emptyFolderIssue(path, entries);
+  if (empty) issues.folders.push(empty);
+  issues.files.push(...listingIssues(path, entries, "folder"));
 }
 
 const DRIVE_REREAD_COOLDOWN_MS = 60_000;
@@ -120,9 +147,13 @@ async function loadDrive(
   const folders: DriveSnapshot["folders"] = [];
   let emergency: DriveEntry[] = [];
   let holidays: HolidayFolder[] = [];
+  const issues: DriveIssues = {
+    folders: [],
+    files: listingIssues(null, rootListing.entries, "root"),
+  };
   for (const f of rootListing.entries.filter((e) => e.isFolder)) {
     if (isHolidaysFolder(f.name)) {
-      holidays = holidays.concat(await loadHolidayFolders(f.id, today));
+      holidays = holidays.concat(await loadHolidayFolders(f.id, today, issues));
       continue;
     }
     if (isEmergencyFolder(f.name)) {
@@ -130,11 +161,14 @@ async function loadDrive(
       if (!listing.recognized)
         throw new Error(`Drive subfolder page not recognised ("${f.name}")`);
       emergency = emergency.concat(listing.entries);
+      // Empty is normal here (no emergency), so only its contents are checked.
+      issues.files.push(...listingIssues(f.name, listing.entries, "folder"));
       continue;
     }
     const parsed = parseFolderName(f.name);
     if (!parsed.ok) {
       console.warn(`[drive] ignoring folder "${f.name}": ${parsed.reason}`);
+      issues.folders.push({ name: f.name, reason: parsed.reason });
       continue;
     }
     // A day of margin so a Drive-side timezone override can't drop a folder early.
@@ -142,19 +176,21 @@ async function loadDrive(
     const listing = await listFolder(f.id);
     if (!listing.recognized)
       throw new Error(`Drive subfolder page not recognised ("${f.name}")`);
+    addFolderIssues(issues, f.name, listing.entries);
     folders.push({
       name: f.name,
       window: parsed.window,
       entries: listing.entries,
     });
   }
-  const override = await readOverride(rootListing.entries, downloadText);
+  const config = await readConfig(rootListing.entries, downloadText, exportDocText);
   return {
     root: rootListing.entries,
     emergency,
     folders,
     holidays,
-    override,
+    issues,
+    config,
     fetchedAt: Date.now(),
   };
 }
@@ -164,22 +200,37 @@ async function loadDrive(
  * missing, unreadable, oversized or malformed file is ignored (logged) so it can't stop
  * the images from updating. Only a file named exactly "config.json" counts.
  */
-export async function readOverride(
+const KIND_ORDER: ConfigSource["kind"][] = ["doc", "txt", "json"];
+const displayName = (e: DriveEntry, kind: ConfigSource["kind"]) =>
+  kind === "doc" ? `the Google Doc "${e.name}"` : e.name;
+
+/**
+ * The settings file in the main folder: a Google Doc named "config", else config.txt, else
+ * config.json. Others are noted as ignored. Never throws: an unreadable file has `text: null`.
+ */
+export async function readConfig(
   entries: DriveEntry[],
   download: (fileId: string) => Promise<string>,
-): Promise<unknown> {
-  const file = entries.find(
-    (e) => !e.isFolder && e.name.toLowerCase() === "config.json",
-  );
-  if (!file) return null;
+  exportDoc: (fileId: string) => Promise<string>,
+): Promise<ConfigSource | null> {
+  const found = entries
+    .map((e) => ({ e, kind: configKind(e) }))
+    .filter((x): x is { e: DriveEntry; kind: ConfigSource["kind"] } => x.kind !== null)
+    .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
+  if (!found.length) return null;
+  const [use, ...rest] = found;
+  let text: string | null = null;
   try {
-    return parseOverrideText(await download(file.id));
+    text = await (use.kind === "doc" ? exportDoc : download)(use.e.id);
   } catch (err) {
-    console.warn(
-      `[config] could not read Drive config.json; ignored: ${(err as Error).message}`,
-    );
-    return null;
+    console.warn(`[config] could not read the Drive settings file; ignored: ${(err as Error).message}`);
   }
+  return {
+    kind: use.kind,
+    name: displayName(use.e, use.kind),
+    text,
+    ignored: rest.map((r) => displayName(r.e, r.kind)),
+  };
 }
 
 async function loadCalendar(
@@ -247,6 +298,8 @@ export const isEmergencyFolder = (name: string) =>
 
 /** The root subfolder holding one folder per holiday. */
 export const HOLIDAYS_FOLDER = "Holidays";
+const HOLIDAY_REASON =
+  "isn't a holiday date (like \"July 4\" or \"Fourth Thursday in November\") or a date like 2026-12-01";
 export const isHolidaysFolder = (name: string) =>
   name.trim().replace(/\s+/g, " ").toLowerCase() === HOLIDAYS_FOLDER.toLowerCase();
 
@@ -359,7 +412,11 @@ export async function getPlaylist(): Promise<Playlist> {
     ? await resilient("drive", () => loadDrive(folderId, env.timezone))
     : null;
   if (folderId && !drive) degraded.push("drive");
-  const config = buildSettings(env.timezone, drive?.override ?? null);
+  // `override` only exists in snapshots cached before the settings Doc.
+  const config = buildSettings(
+    env.timezone,
+    drive ? (drive.config !== undefined ? overrideFrom(drive.config) : drive.override) : null,
+  );
 
   const calendarId = env.calendarId;
   const cal = calendarId
@@ -381,6 +438,8 @@ export async function getPlaylist(): Promise<Playlist> {
     ? assembleImages(drive, dayInTz(now, config.timezone), config.holidays)
     : [];
   const emergency = !!drive && (drive.emergency ?? []).some(isImageEntry);
+  const driveIssues = drive?.issues;
+  const configFile = drive?.config ? checkConfigFile(drive.config) : null;
   return {
     images,
     events,
@@ -390,6 +449,10 @@ export async function getPlaylist(): Promise<Playlist> {
     degraded,
     release: currentRelease(),
     ...(emergency ? { emergency: true } : {}),
+    ...(driveIssues && (driveIssues.folders.length || driveIssues.files.length)
+      ? { driveIssues }
+      : {}),
+    ...(configFile ? { configFile } : {}),
     sources: {
       drive: !folderId
         ? "unconfigured"

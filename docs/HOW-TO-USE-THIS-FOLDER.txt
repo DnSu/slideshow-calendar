@@ -2,7 +2,8 @@ HOW TO USE THIS FOLDER
 ======================
 
 Pictures in this folder are shown on the building's screens.
-This text file is never shown on screen; only pictures are.
+This text file and the config Doc are never shown on screen; only
+pictures are.
 
 
 1. PICTURES THAT ALWAYS SHOW
@@ -106,65 +107,63 @@ about 10 minutes.
 - Use pictures the same shape as the screen (for a tall screen,
   1080 wide by 1920 high). Other shapes are trimmed at the edges
   to fill the screen.
-- Use JPG or PNG files.
+- Use JPG or PNG files. PDFs, videos, Word files, Google Slides and
+  shortcuts don't show; save them as a JPG or PNG first.
+- To see what's wrong, open the website's /slideshow page. Under the
+  picture it lists folder names it doesn't understand, folders with
+  no pictures, files that won't show (and why), and mistakes in
+  the settings.
 - Changes can take up to about an hour and a half to appear.
   If you move or delete a picture, the screens notice when they try
   to show it, skip it, and update their list within a few minutes.
 - Old date folders stop showing by themselves. You can delete them
   whenever you like.
-- Don't rename the file called config.json if there is one.
+- Don't rename the Google Doc called config if there is one.
   It holds the screen settings (see below).
 
 
-5. SCREEN SETTINGS (config.json)
---------------------------------
-A file named exactly config.json in this folder changes how the
-screens behave. If there is no such file, the screens use their
-built-in settings, which are the same as the values below.
+5. SCREEN SETTINGS (the "config" Google Doc)
+--------------------------------------------
+A Google Doc named exactly config in this folder changes how the
+screens behave. If there is none, the screens use their built-in
+settings.
 
-  Setting            What it does
-  -----------------  ------------------------------------------------
-  imageSeconds       seconds each picture stays on screen (20)
-  imageFit           "cover" fills the screen and trims the edges;
-                     "contain" shows the whole picture with black bars
-  transitionMs       length of the fade between pictures, in
-                     thousandths of a second (1000 = 1 second)
-  showAfterImages    how many pictures before the calendar shows (5)
-  displaySeconds     seconds each calendar page stays on screen (60)
-  fetchDays          how many days ahead to list events (365)
-  eventsPerPage      events per calendar page (8)
-  title              heading at the top of the calendar
-  playlistMinutes    how often screens check for changes (10)
-  pageReloadHours    how often screens fully restart the page (6)
-  showIndicator      true shows a small dot when a screen is offline
+To make it: in this folder, choose New, Google Docs, name it config,
+and paste in the settings from the website's /slideshow page (the
+"Copy fixed settings" button) or from the template that comes with
+this guide. Each line looks like this:
 
-The weather slide has its own "weather" section in config.json:
+  PICTURE_SECONDS = 20
 
-  Setting            What it does
-  -----------------  ------------------------------------------------
-  enabled            false hides the weather slide (true)
-  units              "fahrenheit" or "celsius"
-  displaySeconds     seconds the weather slide stays on screen (15)
-  title              heading on the weather slide ("Weather")
+Change the value after the = sign. That's all: no quotes, commas or
+brackets. Lines starting with # are notes. Delete a line to use the
+built-in value. For on/off settings, write yes or no.
 
-The "holidays" section sets when holiday pictures show:
+The notes in the Doc explain each setting. The main ones:
 
-  Setting            What it does
-  -----------------  ------------------------------------------------
-  daysBefore         days before a holiday they start showing (7)
-  daysAfter          days after a holiday they keep showing (1)
+  PICTURE_SECONDS            seconds each picture stays on screen (20)
+  PICTURE_FIT                cover fills the screen and trims the edges;
+                             contain shows the whole picture
+  CALENDAR_AFTER_PICTURES    pictures before the calendar shows (5)
+  CALENDAR_SECONDS           seconds each calendar page shows (60)
+  CALENDAR_TITLE             heading at the top of the calendar
+  SHOW_WEATHER               yes or no
+  WEATHER_SECONDS            seconds the weather shows (15)
+  HOLIDAY_DAYS_BEFORE        days before a holiday its pictures show (7)
+  HOLIDAY_DAYS_AFTER         days after a holiday they keep showing (1)
 
-The weather slide shows right after the calendar. It needs the
-screen's location to be set up by whoever manages the website.
+The weather page needs the screen's location, which is set up by
+whoever manages the website.
 
-To change a setting, edit the number or text and save. Keep the
-quotes, commas and brackets exactly as they are. You can delete
-lines you don't want to change (keep the commas correct), and you
-can add "timezone": "America/Chicago" at the top level to change
-the time zone.
+If a line has a mistake, the screens ignore just that line and use
+the built-in value, so a typo can't break the screens. The website's
+/slideshow page lists any mistakes, and its "Copy fixed settings"
+button copies a corrected version, keeping your settings: select
+everything in the Doc and paste it over.
 
-If the file has a mistake, the screens ignore the broken part and
-keep their built-in settings, so a typo can't break the screens.
 Changes take effect within about an hour and a half.
 
-Deleting config.json returns everything to the built-in settings.
+An older file called config.json still works, but only if there is
+no config Doc. Use one or the other, not both.
+
+Deleting the config Doc returns everything to the built-in settings.

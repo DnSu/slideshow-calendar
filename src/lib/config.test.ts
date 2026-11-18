@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildSettings,
+  checkConfigFile,
+  overrideFrom,
+  type ConfigSource,
   defaultSettings,
   getEnv,
   getWeatherLocation,
@@ -103,18 +106,6 @@ describe("buildSettings / parseOverrideText", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(parseOverrideText("{ nope")).toBeNull();
     expect(parseOverrideText('﻿{"a":1}')).toEqual({ a: 1 });
-  });
-});
-
-describe("docs/config.json (the copy-to-Drive template)", () => {
-  it("is valid, has no ignored settings, and matches the code defaults", async () => {
-    const { readFileSync } = await import("node:fs");
-    const template = JSON.parse(
-      readFileSync(new URL("../../docs/config.json", import.meta.url), "utf8"),
-    );
-    const r = mergeSettings(defaultSettings, template);
-    expect(r.problems).toEqual([]);
-    expect(r.settings).toEqual(defaultSettings);
   });
 });
 
@@ -254,5 +245,69 @@ describe("settings from a malformed config.json never throw", () => {
       defaultSettings.slideshow.imageFit,
     );
     expect(r.problems).toHaveLength(1);
+  });
+});
+
+describe("checkConfigFile (Drive settings problems shown in /slideshow)", () => {
+  const template = async () => {
+    const { readFileSync } = await import("node:fs");
+    return readFileSync(new URL("../../docs/config.txt", import.meta.url), "utf8");
+  };
+  const doc = (text: string | null, ignored: string[] = []): ConfigSource => ({
+    kind: "doc",
+    name: 'the Google Doc "config"',
+    text,
+    ignored,
+  });
+  const json = (text: string): ConfigSource => ({ kind: "json", name: "config.json", text, ignored: [] });
+
+  it("has nothing to say without a file, or for the template Doc", async () => {
+    expect(checkConfigFile(null)).toBeNull();
+    expect(checkConfigFile(doc(await template()))).toBeNull();
+  });
+  it("a fine config.json still gets a note suggesting the Doc", () => {
+    const full = JSON.stringify({ ...defaultSettings, refresh: { playlistMinutes: 10, pageReloadHours: 6 } });
+    const r = checkConfigFile(json(full))!;
+    expect(r.problems).toEqual([]);
+    expect(r.missing).toEqual([]);
+    expect(r.note).toMatch(/Google Doc named "config"/);
+  });
+  it("broken JSON or an unreadable file: everything ignored, fixed copy is the defaults", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (const r of [checkConfigFile(json('{"slideshow": {')), checkConfigFile(doc(null)), checkConfigFile(doc("<html>Sign in</html>"))]) {
+      expect(r!.problems).toHaveLength(1);
+      expect(r!.fixed).toBe(await template());
+    }
+  });
+  it("config.json: keeps valid values, names problems by their JSON path, lists missing ones", () => {
+    const r = checkConfigFile(
+      json(JSON.stringify({ timezone: "America/Chicago", slideshow: { imageSeconds: 15, imageFit: "zoom", extra: 1 }, refresh: { sourceMinutes: 5 } })),
+    )!;
+    expect(r.problems).toEqual([
+      'invalid value for "slideshow.imageFit"; using default',
+      'unknown setting "slideshow.extra"; ignored',
+      '"refresh.sourceMinutes" cannot be set from Drive; ignored',
+    ]);
+    expect(r.missing).toContain("holidays.daysBefore");
+    expect(r.missing).not.toContain("refresh.sourceMinutes");
+    expect(r.fixed).toContain("PICTURE_SECONDS = 15\n");
+    expect(r.fixed).toContain("PICTURE_FIT = cover\n");
+    expect(r.fixed).toContain("TIMEZONE = America/Chicago\n");
+  });
+  it("the Doc: names problems by their Doc names; the fixed copy reads back clean", () => {
+    const r = checkConfigFile(doc("PICTURE_SECONDS = 9999\nTIMEZONE = Mars/Base", ['config.json']))!;
+    expect(r.problems).toEqual([
+      'config.json is ignored, because the Google Doc "config" is used; delete one of them',
+      "invalid value for PICTURE_SECONDS; using default",
+      "invalid value for TIMEZONE; using default",
+    ]);
+    expect(r.missing).toContain("HOLIDAY_DAYS_BEFORE");
+    expect(r.fixed).not.toMatch(/^TIMEZONE/m);
+    expect(checkConfigFile(doc(r.fixed))).toBeNull();
+  });
+  it("overrideFrom reads JSON or the Doc format", () => {
+    expect(overrideFrom(null)).toBeNull();
+    expect(overrideFrom(doc("picture seconds: 12"))).toEqual({ slideshow: { imageSeconds: 12 } });
+    expect(overrideFrom(json('{"slideshow":{"imageSeconds":12}}'))).toEqual({ slideshow: { imageSeconds: 12 } });
   });
 });

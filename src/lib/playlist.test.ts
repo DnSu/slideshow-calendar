@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { isImageEntry, type DriveEntry, fileVersion } from "@/lib/drive";
 import {
   assembleImages,
-  readOverride,
+  readConfig,
   isEmergencyFolder,
   isHolidaysFolder,
 } from "@/lib/playlist";
@@ -70,54 +70,48 @@ describe("non-image files in the Drive folder", () => {
   });
 });
 
-describe("readOverride (Drive config.json)", () => {
+describe("readConfig (the Drive settings file)", () => {
   const silence = () => vi.spyOn(console, "warn").mockImplementation(() => {});
+  const doc = file("fakeDocId0000000000001", "config", "application/vnd.google-apps.document");
+  const txt = file("fakeTxtId0000000000001", "config.txt", "text/plain");
+  const never = vi.fn(async () => "");
 
-  it("returns null when there is no config.json, and ignores near-miss names", async () => {
-    const download = vi.fn();
-    expect(await readOverride([guide, photo], download)).toBeNull();
+  it("returns null without one, and ignores near-miss names and other Docs", async () => {
+    expect(await readConfig([guide, photo], never, never)).toBeNull();
     expect(
-      await readOverride(
+      await readConfig(
         [
           file("a", "config (1).json", null),
           file("b", "config.json.txt", null),
+          file("c", "Config notes", "application/vnd.google-apps.document"),
         ],
-        download,
+        never,
+        never,
       ),
     ).toBeNull();
-    expect(download).not.toHaveBeenCalled();
+    expect(never).not.toHaveBeenCalled();
   });
 
-  it("parses a valid file", async () => {
-    expect(
-      await readOverride(
-        [guide, config],
-        async () => '{"slideshow":{"imageSeconds":30}}',
-      ),
-    ).toEqual({
-      slideshow: { imageSeconds: 30 },
+  it("prefers the Doc, then config.txt, then config.json, and notes the others", async () => {
+    const download = vi.fn(async () => "from download");
+    const exportDoc = vi.fn(async () => "from Doc");
+    expect(await readConfig([config, txt, doc], download, exportDoc)).toEqual({
+      kind: "doc",
+      name: 'the Google Doc "config"',
+      text: "from Doc",
+      ignored: ["config.txt", "config.json"],
     });
+    expect(exportDoc).toHaveBeenCalledWith(doc.id);
+    expect(await readConfig([config, txt], download, exportDoc)).toMatchObject({ kind: "txt", text: "from download", ignored: ["config.json"] });
+    expect(await readConfig([guide, config], download, exportDoc)).toMatchObject({ kind: "json", name: "config.json", ignored: [] });
   });
 
-  it("ignores malformed JSON, a failed download, and an HTML error page", async () => {
+  it("a failed download gives text null instead of throwing", async () => {
     const warn = silence();
-    expect(
-      await readOverride(
-        [config],
-        async () => '{"slideshow": {"imageSeconds": 30,}',
-      ),
-    ).toBeNull();
-    expect(
-      await readOverride([config], async () => {
-        throw new Error("HTTP 500");
-      }),
-    ).toBeNull();
-    expect(
-      await readOverride(
-        [config],
-        async () => "<!DOCTYPE html><html>Sign in</html>",
-      ),
-    ).toBeNull();
+    const r = await readConfig([config], async () => {
+      throw new Error("HTTP 500");
+    }, never);
+    expect(r).toMatchObject({ kind: "json", text: null });
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });

@@ -12,6 +12,7 @@ import type { Playlist, PlaylistImage } from "@/lib/types";
 import CalendarSlide from "./CalendarSlide";
 import WeatherSlide from "./WeatherSlide";
 import styles from "./Preview.module.css";
+import DriveIssuesPanel from "./DriveIssuesPanel";
 import MoreMenu from "./MoreMenu";
 import { NextIcon, PrevIcon, RefreshIcon } from "./PreviewIcons";
 import NothingToShow from "./NothingToShow";
@@ -214,8 +215,16 @@ export default function SlideshowPreview({ demo }: Props) {
   if (error) notice = `Could not load /api/playlist: ${error}`;
   else if (!cfg) notice = "Loading…";
 
+  const hasIssues = !!(playlist?.driveIssues || playlist?.configFile);
+
   return (
-    <div className={styles.previewPage}>
+    <div
+      className={
+        hasIssues
+          ? `${styles.previewPage} ${styles.withIssues}`
+          : styles.previewPage
+      }
+    >
       <div className={styles.previewFrame}>
         {cfg && step && (
           <div
@@ -327,6 +336,10 @@ export default function SlideshowPreview({ demo }: Props) {
               : "—")}
         </div>
       </div>
+
+      {hasIssues && (
+        <DriveIssuesPanel issues={playlist?.driveIssues} configFile={playlist?.configFile} />
+      )}
     </div>
   );
 }

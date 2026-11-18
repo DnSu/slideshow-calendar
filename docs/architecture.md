@@ -13,7 +13,9 @@
 slideshow.config.json        default settings
 src/lib/config.ts            env vars, defaults, Drive override merge, validation (zod)
 src/lib/folderDates.ts       folder names to date windows
-src/lib/drive.ts             Drive listing, config.json download, thumbnails
+src/lib/settingsText.ts      the settings Doc format (NAME = value), parse and write
+src/lib/driveIssues.ts       plain-language notes on Drive files and folders that won't show
+src/lib/drive.ts             Drive listing, settings Doc export / config file download, thumbnails
 src/lib/calendar.ts          iCal fetch and parse (node-ical)
 src/lib/playlist.ts          cached sources and the playlist
 src/lib/slides.ts            slide order and timing, clock check

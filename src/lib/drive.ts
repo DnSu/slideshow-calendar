@@ -122,3 +122,19 @@ export async function downloadText(fileId: string): Promise<string> {
   if (text.length > MAX_DOWNLOAD_CHARS) throw new Error(`file is larger than ${MAX_DOWNLOAD_CHARS} characters`);
   return text;
 }
+
+/**
+ * Plain text of a public Google Doc (the "config" settings Doc). UNVERIFIED against a live
+ * Doc: uses the public export link, which needs no sign-in for a Doc shared by link.
+ */
+export function docExportUrl(fileId: string) {
+  return `https://docs.google.com/document/d/${encodeURIComponent(fileId)}/export?format=txt`;
+}
+
+export async function exportDocText(fileId: string): Promise<string> {
+  const text = await getText(docExportUrl(fileId));
+  if (text.length > MAX_DOWNLOAD_CHARS) throw new Error(`file is larger than ${MAX_DOWNLOAD_CHARS} characters`);
+  return text;
+}
+
+export const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";

@@ -11,7 +11,7 @@ No Google API key is needed. The Drive folder and the calendar only have to be p
 - **Upcoming events** from Google Calendar after every 5 images, paged, with multi-day events.
 - **Weather**: today large and the next 4 days, from Open-Meteo, by ZIP code.
 - **Works offline**: screens keep running from saved content, and update themselves after a new deploy.
-- **Settings without redeploying**: a `config.json` in the Drive folder.
+- **Settings without redeploying**: a Google Doc named `config` in the Drive folder (one `NAME = value` per line).
 - **Friendly empty screen**: if there's nothing to show, the screen says why.
 - **Developer previews** at `/slideshow`, `/calendar` and `/weather`.
 
@@ -34,7 +34,7 @@ npm run dev                   # http://localhost:3000
 | [Google Drive](docs/google-drive.md) | Making the folder public, date folders, Holidays, Emergency Override, replacing pictures |
 | [Google Calendar](docs/google-calendar.md) | Making the calendar public and finding its ID |
 | [Weather](docs/weather.md) | ZIP or coordinates, Open-Meteo terms, icon credits |
-| [Settings](docs/settings.md) | Every setting, and changing them from Drive with `config.json` |
+| [Settings](docs/settings.md) | Every setting, and changing them from Drive with the `config` Google Doc |
 | [Deploy](docs/deploy.md) | Vercel, PiSignage Web Link, how fast updates reach screens |
 | [Offline](docs/offline.md) | What happens without internet, and the reboot test |
 | [Developer previews](docs/previews.md) | `/slideshow`, `/calendar`, `/weather` and their controls |

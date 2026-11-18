@@ -1,4 +1,4 @@
-import type { Settings } from "./config";
+import type { ConfigFileCheck, Settings } from "./config";
 import type { Day } from "./dates";
 import type { HolidayWindow } from "./holidays";
 
@@ -78,6 +78,10 @@ export type Playlist = {
    * and screens skip the calendar and weather until the images are removed.
    */
   emergency?: boolean;
+  /** Things in the Drive folder that won't show, in plain words (absent when there are none). */
+  driveIssues?: DriveIssues;
+  /** Problems with Drive's config.json and a corrected copy (absent when it's fine or missing). */
+  configFile?: ConfigFileCheck;
   /** Why each source has (or hasn't) got content, so an empty screen can say why. */
   sources: SourceStatuses;
 };
@@ -92,4 +96,19 @@ export type SourceStatuses = {
   drive: SourceStatus;
   calendar: SourceStatus;
   weather: SourceStatus;
+};
+
+/** Something in the Drive folder that won't show on the screen. */
+export type DriveIssue = {
+  /** Its path as people see it in Drive: "Holidays › July 4 › flyer.pdf". */
+  name: string;
+  /** Why, in plain words ("ends before it starts", "is a PDF; …"). */
+  reason: string;
+};
+
+export type DriveIssues = {
+  /** Folders whose names aren't understood, or that have no pictures. */
+  folders: DriveIssue[];
+  /** Files that aren't pictures, or aren't where they'd be shown. */
+  files: DriveIssue[];
 };

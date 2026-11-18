@@ -22,7 +22,7 @@ export const ALWAYS: DateWindow = { start: null, end: null };
 
 export type ParsedFolder =
   | { ok: true; window: DateWindow }
-  | { ok: false; reason: string };
+  | { ok: false; /** Plain words for whoever names the folders. */ reason: string };
 
 const MONTH_RE = /^(\d{4})-(\d{2})$/;
 const YEARLY_DAY_RE = /^0000-(\d{2})-(\d{2})$/;
@@ -49,6 +49,13 @@ function yearlyPart(s: string): { first: MonthDay; last: MonthDay } | null {
 }
 
 const isYearly = (s: string) => s.startsWith("0000-");
+
+// `reason`s are shown to the people who name the folders (in the /slideshow preview).
+const NOT_A_DATE = "doesn't start with a date, like 2026-12-01";
+const NO_SUCH_DATE = "has a date that doesn't exist";
+const NO_DASH = "needs \" - \" between the dates and the description, like 2026-12-01 - Pool closed";
+const FULL_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TOO_MANY = "isn't one date or two (start and end), then an optional \" - description\"";
 
 /** " - ", " – " or " — " (spaces required, so the dashes inside dates don't count). */
 const LABEL_SEP = /\s+[-–—]\s+/;
@@ -80,12 +87,14 @@ export function stripLabel(name: string): string {
  */
 export function parseFolderName(name: string): ParsedFolder {
   const parts = stripLabel(name).split(/\s+/);
+  if (!STARTS_WITH_DATE.test(parts[0])) return { ok: false, reason: NOT_A_DATE };
+  if (parts.slice(1).some((p) => !STARTS_WITH_DATE.test(p))) return { ok: false, reason: NO_DASH };
   if (parts.some(isYearly)) {
-    if (!parts.every(isYearly)) return { ok: false, reason: "mixes yearly (0000) and dated parts" };
-    if (parts.length > 2) return { ok: false, reason: "unrecognised folder name" };
+    if (!parts.every(isYearly)) return { ok: false, reason: "mixes a yearly date (0000-…) with a dated one" };
+    if (parts.length > 2) return { ok: false, reason: TOO_MANY };
     const a = yearlyPart(parts[0]);
     const b = parts.length === 2 ? yearlyPart(parts[1]) : a;
-    if (!a || !b) return { ok: false, reason: "invalid yearly date" };
+    if (!a || !b) return { ok: false, reason: "has a yearly date that doesn't exist" };
     return { ok: true, window: { start: null, end: null, yearly: { from: a.first, to: b.last } } };
   }
   if (parts.length === 1) {
@@ -93,19 +102,20 @@ export function parseFolderName(name: string): ParsedFolder {
     if (mm) {
       const year = Number(mm[1]);
       const month = Number(mm[2]);
-      if (month < 1 || month > 12) return { ok: false, reason: "month out of range" };
+      if (month < 1 || month > 12) return { ok: false, reason: "has a month that doesn't exist" };
       return { ok: true, window: { start: null, end: lastDayOfMonth(year, month) } };
     }
     if (isValidDay(parts[0])) return { ok: true, window: { start: null, end: parts[0] } };
-    return { ok: false, reason: "not a date" };
+    if (FULL_DAY_RE.test(parts[0])) return { ok: false, reason: NO_SUCH_DATE };
+    return { ok: false, reason: NOT_A_DATE };
   }
   if (parts.length === 2) {
     const [a, b] = parts;
-    if (!isValidDay(a) || !isValidDay(b)) return { ok: false, reason: "invalid date in range" };
-    if (b < a) return { ok: false, reason: "end before start" };
+    if (!isValidDay(a) || !isValidDay(b)) return { ok: false, reason: NO_SUCH_DATE };
+    if (b < a) return { ok: false, reason: "ends before it starts" };
     return { ok: true, window: { start: a, end: b } };
   }
-  return { ok: false, reason: "unrecognised folder name" };
+  return { ok: false, reason: TOO_MANY };
 }
 
 export function isActiveOnDay(window: DateWindow, today: Day): boolean {
