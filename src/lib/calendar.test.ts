@@ -124,3 +124,21 @@ describe("cleanDescription", () => {
     expect(long.endsWith("…")).toBe(true);
   });
 });
+
+describe("invitations from outside the calendar", () => {
+  const range = { from: Date.parse("2026-03-09T00:00:00Z"), to: Date.parse("2026-04-08T00:00:00Z") };
+  const ics = fixture("calendar-invitations.ics");
+  const calendarId = "fake-calendar-0001@group.calendar.google.com";
+
+  it("keeps events added on the calendar, with or without guests, and leaves out invitations", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const titles = parseIcs(ics, range, "UTC", calendarId).map((e) => e.title);
+    expect(titles).toEqual(["Added on the calendar", "Added on the calendar with guests"]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("left out 2 invitation"));
+    warn.mockRestore();
+  });
+
+  it("without a calendar ID, nothing is filtered", () => {
+    expect(parseIcs(ics, range, "UTC").map((e) => e.title)).toContain("Spam invitation");
+  });
+});

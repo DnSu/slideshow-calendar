@@ -84,16 +84,38 @@ function toEvent(
   };
 }
 
-/** Parse ICS text into expanded events overlapping [from, to]. Pure; an empty calendar gives []. */
-export function parseIcs(icsText: string, range: Range, tz: string): PlaylistEvent[] {
+/** "mailto:Name@Example.com" → "name@example.com". */
+const address = (v: VEvent["organizer"]) => text(v as ParameterValue | undefined).replace(/^mailto:/i, "").trim().toLowerCase();
+
+/**
+ * Whether the calendar itself owns the event. Events added directly on the calendar (by anyone
+ * it's shared with) have no ORGANIZER, or the calendar as organizer when they have guests. An
+ * invitation sent to the calendar from elsewhere has the sender as organizer: that's how someone
+ * outside the building could put an event on the screens, so those are left out.
+ */
+export function isOwnEvent(ev: VEvent, calendarId: string): boolean {
+  const org = address(ev.organizer);
+  return org === "" || org === calendarId.trim().toLowerCase();
+}
+
+/**
+ * Parse ICS text into expanded events overlapping [from, to]. Pure; an empty calendar gives [].
+ * With `calendarId`, invitations from other calendars are left out (see `isOwnEvent`).
+ */
+export function parseIcs(icsText: string, range: Range, tz: string, calendarId?: string): PlaylistEvent[] {
   const data = ical.parseICS(icsText);
   const out: PlaylistEvent[] = [];
+  let invitations = 0;
   const from = new Date(range.from);
   const to = new Date(range.to);
   for (const item of Object.values(data)) {
     if (!item || item.type !== "VEVENT") continue;
     const ev = item as VEvent;
     if (!ev.start) continue;
+    if (calendarId && !isOwnEvent(ev, calendarId)) {
+      invitations++;
+      continue;
+    }
     try {
       if (ev.rrule) {
         for (const inst of ical.expandRecurringEvent(ev, { from, to, expandOngoing: true })) {
@@ -110,6 +132,8 @@ export function parseIcs(icsText: string, range: Range, tz: string): PlaylistEve
       console.warn(`[calendar] skipped an event that could not be expanded: ${(err as Error).message}`);
     }
   }
+  if (invitations)
+    console.warn(`[calendar] left out ${invitations} invitation(s) from outside the calendar`);
   const seen = new Set<string>();
   return out
     .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
@@ -130,5 +154,5 @@ export async function fetchEvents(
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching calendar feed`);
   const body = await res.text();
   if (!body.includes("BEGIN:VCALENDAR")) throw new Error("calendar feed is not iCalendar data");
-  return parseIcs(body, { from: now - 24 * 3600_000, to: now + fetchDays * 24 * 3600_000 }, tz);
+  return parseIcs(body, { from: now - 24 * 3600_000, to: now + fetchDays * 24 * 3600_000 }, tz, calendarId);
 }
