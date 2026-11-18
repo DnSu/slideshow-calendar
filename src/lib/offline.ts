@@ -51,18 +51,22 @@ export async function warmImages(urls: string[], isCancelled: () => boolean) {
   }
 }
 
+/**
+ * Load an image into the browser's cache. Resolves false on error or after `timeoutMs`; a
+ * timed-out download is cancelled so a stalled one can't linger (the screen runs for weeks).
+ */
 export function preloadImage(url: string, timeoutMs = 10_000): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new Image();
-    const timer = setTimeout(() => resolve(false), timeoutMs);
-    img.onload = () => {
+    const done = (ok: boolean) => {
       clearTimeout(timer);
-      resolve(true);
+      img.onload = img.onerror = null;
+      if (!ok) img.removeAttribute("src"); // stops a pending download
+      resolve(ok);
     };
-    img.onerror = () => {
-      clearTimeout(timer);
-      resolve(false);
-    };
+    const timer = setTimeout(() => done(false), timeoutMs);
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
     img.src = url;
   });
 }

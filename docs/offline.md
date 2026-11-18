@@ -2,6 +2,8 @@
 
 The first load needs internet. After that, a service worker saves the page, every image and the latest playlist in the Pi's browser, and asks the browser to keep that storage (`navigator.storage.persist()`). Images that left the playlist are deleted, and saved app files from older deploys are cleaned up after a page loads from the network. While offline the screen keeps going: folder windows and event times are checked locally, the 6 hour page reload and the new-deploy reload are skipped (an offline screen keeps the old version and updates after it reconnects), and a small amber dot appears in the bottom-right corner (turn it off with `offline.showIndicator`).
 
+**Running for weeks.** The screen page is built to stay flat in memory: at most two slide layers exist at a time (the outgoing one is removed after the fade), there is one playlist timer, one clock timer and one slide loop, preloads that time out are cancelled, and the browser's per-request timing log is cleared every minute. Saved images and app files on disk are pruned to what the playlist and the current deploy use. The `refresh.pageReloadHours` reload (6 hours by default) restarts the page anyway, as a backstop; it is skipped while offline, so an offline screen keeps running on the same page until it reconnects.
+
 The screen never trusts a clock earlier than the last successful contact with the server, because a Pi without a battery-backed clock restarts at its last saved time.
 
 **Test this on your own player before relying on it** (it depends on PiSignage's browser keeping its storage across reboots):

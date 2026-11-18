@@ -53,8 +53,12 @@ export default function Player() {
     playlistRef.current = playlist;
   }, [playlist]);
 
+  // setupOffline reads the browser's resource timings once; after that they're cleared every minute.
+  const offlineSetUp = useRef(false);
   useEffect(() => {
-    void setupOffline();
+    void setupOffline().finally(() => {
+      offlineSetUp.current = true;
+    });
   }, []);
 
   // Fetch the playlist now and then. A failed fetch (or one answered from the saved copy)
@@ -139,6 +143,9 @@ export default function Player() {
   useEffect(() => {
     const started = performance.now();
     const tick = () => {
+      // The browser logs a timing entry per request (up to its buffer size); nothing here
+      // needs them after setup, so don't let them pile up on a screen that runs for weeks.
+      if (offlineSetUp.current) performance.clearResourceTimings?.();
       const pl = playlistRef.current;
       setNowMs(trustedNow(Date.now(), pl?.serverTime ?? 0));
       const hours = pl?.config.refresh.pageReloadHours ?? 6;
